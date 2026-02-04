@@ -16,6 +16,57 @@ Your goal is to transform a blog post into highly engaging, platform-specific co
 You understand the nuances of LinkedIn, Instagram, Twitter/X, and Newsletters.
 RESPONSE FORMAT: You MUST return valid JSON. No other text.`;
 
+const cleanJSON = (text) => {
+    // 1. Locate the first '{' and last '}'
+    const startIndex = text.indexOf('{');
+    const endIndex = text.lastIndexOf('}');
+
+    if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
+        return text; // Return original if no JSON structure found
+    }
+
+    const jsonString = text.substring(startIndex, endIndex + 1);
+
+    // 2. State machine to sanitize control characters within strings
+    let cleaned = '';
+    let inString = false;
+    let isEscaped = false;
+
+    for (let i = 0; i < jsonString.length; i++) {
+        const char = jsonString[i];
+
+        if (isEscaped) {
+            cleaned += char;
+            isEscaped = false;
+            continue;
+        }
+
+        if (char === '\\') {
+            isEscaped = true;
+            cleaned += char;
+            continue;
+        }
+
+        if (char === '"') {
+            inString = !inString;
+            cleaned += char;
+            continue;
+        }
+
+        if (inString) {
+            if (char === '\n') cleaned += '\\n';
+            else if (char === '\r') cleaned += '\\r';
+            else if (char === '\t') cleaned += '\\t';
+            // Preserve other characters
+            else cleaned += char;
+        } else {
+            cleaned += char;
+        }
+    }
+
+    return cleaned;
+};
+
 const callLLM = async (prompt) => {
     try {
         const response = await axios.post(AI_MODEL_ENDPOINT, {
@@ -30,17 +81,27 @@ const callLLM = async (prompt) => {
         });
 
         // Handle both OpenAI-compatible and Ollama-native responses
-        const content = response.data.choices
+        const rawContent = response.data.choices
             ? response.data.choices[0].message.content
             : response.data.message.content;
 
-        return JSON.parse(content);
+        const cleanContent = cleanJSON(rawContent);
+
+        try {
+            return JSON.parse(cleanContent);
+        } catch (parseError) {
+            console.error('JSON Parse Error:', parseError.message);
+            console.error('Raw Content that failed:', rawContent);
+            console.error('Cleaned Content that failed:', cleanContent);
+            throw parseError; // Re-throw to hit the outer catch or be handled
+        }
     } catch (error) {
         console.error('LLM Call Error:', error.message);
         // Fallback logic for demo purposes if LLM is unavailable
         return {
-            content: "Error: AI engine unreachable. Ensure Ollama is running.",
-            error: true
+            content: "Error: AI engine unreachable or returned invalid JSON. ensure Ollama is running and model is loaded.",
+            error: true,
+            details: error.message
         };
     }
 };

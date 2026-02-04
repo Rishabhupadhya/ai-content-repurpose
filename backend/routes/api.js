@@ -50,13 +50,12 @@ router.post('/generate', async (req, res) => {
         const audience = contentEntry.targetAudience;
 
         // Parallel Generation using Open-Source Models
-        const [linkedin, instagram, twitter, newsletter, seo] = await Promise.all([
-            ai.generateLinkedIn(content, audience),
-            ai.generateInstagram(content, audience),
-            ai.generateTwitter(content, audience),
-            ai.generateNewsletter(content, audience),
-            ai.generateSEO(content)
-        ]);
+        // Sequential Generation to prevent local LLM overload
+        const linkedin = await ai.generateLinkedIn(content, audience);
+        const instagram = await ai.generateInstagram(content, audience);
+        const twitter = await ai.generateTwitter(content, audience);
+        const newsletter = await ai.generateNewsletter(content, audience);
+        const seo = await ai.generateSEO(content);
 
         // Heuristic Scoring & Optimization Logic
         const applyHeuristics = (output, platform) => {
