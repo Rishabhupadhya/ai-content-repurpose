@@ -5,6 +5,10 @@ const ai = require('../services/ai');
 const { suggestPostTimes } = require('../services/scheduler');
 const Content = require('../models/Content');
 
+/**
+ * AI Content Repurposer API - Open-Source Workflow
+ */
+
 // 1. Ingest: Scrape blog or accept text
 router.post('/ingest', async (req, res) => {
     try {
@@ -35,7 +39,7 @@ router.post('/ingest', async (req, res) => {
     }
 });
 
-// 2. Generate: Create all outputs
+// 2. Generate: Create all platform-specific outputs
 router.post('/generate', async (req, res) => {
     try {
         const { id } = req.body;
@@ -45,7 +49,7 @@ router.post('/generate', async (req, res) => {
         const content = contentEntry.cleanContent;
         const audience = contentEntry.targetAudience;
 
-        // Run generations in parallel
+        // Parallel Generation using Open-Source Models
         const [linkedin, instagram, twitter, newsletter, seo] = await Promise.all([
             ai.generateLinkedIn(content, audience),
             ai.generateInstagram(content, audience),
@@ -54,9 +58,33 @@ router.post('/generate', async (req, res) => {
             ai.generateSEO(content)
         ]);
 
-        contentEntry.outputs = { linkedin, instagram, twitter, newsletter, seo };
+        // Heuristic Scoring & Optimization Logic
+        const applyHeuristics = (output, platform) => {
+            let score = output.score || 70;
+            let feedback = output.feedback || [];
 
-        // 3. Suggest times
+            // Transparent scoring rules
+            if (output.content?.includes('?') || output.thread?.[output.thread.length - 1]?.includes('?')) {
+                score += 15;
+                feedback.push("+15: Discussion question detected (High engagement trigger)");
+            }
+            if (platform === 'instagram') {
+                score += 10;
+                feedback.push("+10: Carousel format optimized for saves");
+            }
+
+            return { ...output, score: Math.min(score, 100), feedback };
+        };
+
+        contentEntry.outputs = {
+            linkedin: applyHeuristics(linkedin, 'linkedin'),
+            instagram: applyHeuristics(instagram, 'instagram'),
+            twitter: applyHeuristics(twitter, 'twitter'),
+            newsletter: applyHeuristics(newsletter, 'newsletter'),
+            seo
+        };
+
+        // Suggest times based on IST heuristics
         contentEntry.scheduling = {
             linkedin: suggestPostTimes('linkedin'),
             instagram: suggestPostTimes('instagram'),
@@ -67,18 +95,17 @@ router.post('/generate', async (req, res) => {
         await contentEntry.save();
         res.json(contentEntry);
     } catch (error) {
-        console.error('Generation error:', error);
-        res.status(500).json({ error: error.message });
+        console.error('Generation failure:', error);
+        res.status(500).json({ error: "Failed to generate content. Ensure AI model is connected." });
     }
 });
 
-// Get content by ID
 router.get('/content/:id', async (req, res) => {
     try {
         const content = await Content.findById(req.params.id);
         res.json(content);
     } catch (error) {
-        res.status(404).json({ error: 'Not found' });
+        res.status(404).json({ error: 'Data not found' });
     }
 });
 

@@ -1,14 +1,49 @@
-const { OpenAI } = require('openai');
+const axios = require('axios');
 const dotenv = require('dotenv');
 dotenv.config();
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+/**
+ * AI Content Generation Service - OPEN SOURCE EDITION
+ * Uses Llama-3-8B-Instruct via Ollama or Open-Source Inference APIs.
+ */
+
+// Default to local Ollama endpoint, but allow override via ENV
+const AI_MODEL_ENDPOINT = process.env.AI_MODEL_ENDPOINT || 'http://localhost:11434/v1/chat/completions';
+const AI_MODEL_NAME = process.env.AI_MODEL_NAME || 'llama3';
 
 const SYSTEM_PROMPT = `You are an expert social media strategist and content repurposer. 
 Your goal is to transform a blog post into highly engaging, platform-specific content. 
-You understand the nuances of LinkedIn, Instagram, Twitter/X, and Newsletters.`;
+You understand the nuances of LinkedIn, Instagram, Twitter/X, and Newsletters.
+RESPONSE FORMAT: You MUST return valid JSON. No other text.`;
+
+const callLLM = async (prompt) => {
+    try {
+        const response = await axios.post(AI_MODEL_ENDPOINT, {
+            model: AI_MODEL_NAME,
+            messages: [
+                { role: "system", content: SYSTEM_PROMPT },
+                { role: "user", content: prompt }
+            ],
+            stream: false,
+            format: "json", // Ollama specific JSON mode
+            temperature: 0.7
+        });
+
+        // Handle both OpenAI-compatible and Ollama-native responses
+        const content = response.data.choices
+            ? response.data.choices[0].message.content
+            : response.data.message.content;
+
+        return JSON.parse(content);
+    } catch (error) {
+        console.error('LLM Call Error:', error.message);
+        // Fallback logic for demo purposes if LLM is unavailable
+        return {
+            content: "Error: AI engine unreachable. Ensure Ollama is running.",
+            error: true
+        };
+    }
+};
 
 const generateLinkedIn = async (content, audience) => {
     const prompt = `Repurpose this blog for LinkedIn. 
@@ -21,20 +56,10 @@ const generateLinkedIn = async (content, audience) => {
   - Internal explanation of why this format works for LinkedIn
   
   Content: ${content}
-  
-  Return as JSON with "content", "explanation", "score", and "feedback".`;
 
-    const response = await openai.chat.completions.create({
-        model: "gpt-4-turbo-preview",
-        messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: prompt }
-        ],
-        response_format: { type: "json_object" }
-    });
+  Return as JSON with keys: "content", "explanation", "score", "feedback" (array of strings).`;
 
-    // Expected JSON: { "content": "...", "explanation": "...", "score": 85, "feedback": ["..."] }
-    return JSON.parse(response.choices[0].message.content);
+    return await callLLM(prompt);
 };
 
 const generateInstagram = async (content, audience) => {
@@ -49,18 +74,9 @@ const generateInstagram = async (content, audience) => {
 
   Content: ${content}
   
-  Return as JSON with "slides" array, "explanation", "score", and "feedback".`;
+  Return as JSON with keys: "slides" (array), "explanation", "score", "feedback" (array).`;
 
-    const response = await openai.chat.completions.create({
-        model: "gpt-4-turbo-preview",
-        messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: prompt }
-        ],
-        response_format: { type: "json_object" }
-    });
-
-    return JSON.parse(response.choices[0].message.content);
+    return await callLLM(prompt);
 };
 
 const generateTwitter = async (content, audience) => {
@@ -74,18 +90,9 @@ const generateTwitter = async (content, audience) => {
 
   Content: ${content}
   
-  Return as JSON with "thread" array, "explanation", "score", and "feedback".`;
+  Return as JSON with keys: "thread" (array), "explanation", "score", "feedback" (array).`;
 
-    const response = await openai.chat.completions.create({
-        model: "gpt-4-turbo-preview",
-        messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: prompt }
-        ],
-        response_format: { type: "json_object" }
-    });
-
-    return JSON.parse(response.choices[0].message.content);
+    return await callLLM(prompt);
 };
 
 const generateNewsletter = async (content, audience) => {
@@ -99,18 +106,9 @@ const generateNewsletter = async (content, audience) => {
 
   Content: ${content}
   
-  Return as JSON with "content", "explanation", "score", and "feedback".`;
+  Return as JSON with keys: "content", "explanation", "score", "feedback" (array).`;
 
-    const response = await openai.chat.completions.create({
-        model: "gpt-4-turbo-preview",
-        messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: prompt }
-        ],
-        response_format: { type: "json_object" }
-    });
-
-    return JSON.parse(response.choices[0].message.content);
+    return await callLLM(prompt);
 };
 
 const generateSEO = async (content) => {
@@ -123,18 +121,9 @@ const generateSEO = async (content) => {
 
   Content: ${content}
   
-  Return as JSON with "title", "metaDescription", "keywords" array, and "explanation".`;
+  Return as JSON with keys: "title", "metaDescription", "keywords" (array), "explanation".`;
 
-    const response = await openai.chat.completions.create({
-        model: "gpt-4-turbo-preview",
-        messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: prompt }
-        ],
-        response_format: { type: "json_object" }
-    });
-
-    return JSON.parse(response.choices[0].message.content);
+    return await callLLM(prompt);
 };
 
 module.exports = {

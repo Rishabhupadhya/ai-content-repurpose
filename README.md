@@ -1,78 +1,66 @@
-# 🚀 AI Content Repurposing & Distribution Platform
+# 🚀 Open-Source AI Content Repurposing Platform
 
-An elite, production-ready AI engine that transforms a single blog post into optimized, platform-specific content for LinkedIn, Instagram, Twitter/X, Newsletters, and SEO.
+**"This platform intentionally avoids paid APIs and runs on open-source AI models, making it cost-free, privacy-friendly, and deployable by independent creators."**
 
 ## 🌟 Overview
-This platform takes the cognitive load out of content distribution. Instead of manually rewriting your blog for every social network, our AI understands the **platform nuances** (LinkedIn storytelling vs. Twitter punchiness) and generates ready-to-use assets.
+An elite distribution engine designed to solve the "Content Reuse Problem" without vendor lock-in. It converts a single blog post into specialized formats for LinkedIn, Instagram, Twitter, and more—optimized using local Open-Source LLMs (like Llama-3).
 
-### 🏗️ Architecture
+## 🏗️ Architecture (Privacy-First)
 ```ascii
-[ User Input ] -> [ URL Scraper / Raw Text ] 
+[ User Input ] -> [ Local Scraper ] 
       |
       v
-[ Backend (Node/Express) ] <-> [ MongoDB ]
+[ Backend Agent (Node.js) ] <-> [ Local MongoDB ]
       |
       v
-[ AI Engine (OpenAI Prompt Chaining) ]
-      | (Parallel execution)
-      +--> [ LinkedIn Storytelling Agent ]
-      +--> [ IG Carousel Designer Agent ]
-      +--> [ Twitter Thread Specialist ]
-      +--> [ Newsletter Copywriter ]
-      +--> [ SEO Strategist ]
+[ Open-Source AI Engine ]
+      | (Parallel Prompt Chaining)
+      +--> [ Llama-3: LinkedIn Agent ]
+      +--> [ Llama-3: IG Design Agent ]
+      +--> [ Llama-3: Twitter Specialist ]
       |
       v
-[ Intelligence Layer ] -> [ Smart Scheduling IST ] -> [ Engagement Prediction ]
+[ Intelligence Layer ] -> [ Rule-Based IST Scoring ] -> [ Heuristic Scheduling ]
       |
       v
-[ Frontend (Next.js 14) ] -> [ Premium Review Dashboard ]
+[ Premium Frontend (Next.js 14) ]
 ```
 
 ## 🧩 Features
-- **Smart Scraper:** Automatically cleans and extracts main content from any blog URL.
-- **Platform Intelligence:** Adjusts tone, hook style, and formatting per platform.
-- **Engagement Loop:** Predicts "AI Engagement Scores" and provides actionable feedback.
-- **Scheduling Engine:** Suggests peak posting times based on India (IST) geography.
-- **Interactive UI:** Review, edit, and copy content in a sleek, dark-mode dashboard.
+- **Zero API Costs:** Designed to run with Ollama (Llama-3-8B) or Hugging Face.
+- **Rule-Based Strategy:** Engagement scores are calculated transparently (+15 for questions, +10 for carousels).
+- **Smart Scheduling:** Pre-calculated IST (India) peak windows integrated into the workflow.
+- **Universal Ingest:** Scrape any URL or paste raw drafts directly.
 
 ## 🛠️ Tech Stack
-- **Frontend:** Next.js 14, Tailwind CSS, Lucide Icons, Axios.
-- **Backend:** Node.js, Express, Mongoose.
-- **AI:** OpenAI GPT-4 Turbo (Prompt Chaining).
-- **Database:** MongoDB.
-- **DevOps:** Docker, Docker Compose.
+- **AI Engine:** Llama-3 (Ollama) / Hugging Face.
+- **Web App:** Next.js 14, Tailwind CSS, Lucide.
+- **State:** Node.js, Express, MongoDB.
+- **DevOps:** Fully Dockerized with `docker-compose`.
 
-## 🚀 Getting Started
+## 🚀 Setup Instructions
 
-### 1. Prerequisites
-- Docker & Docker Compose installed.
-- OpenAI API Key.
+### 1. Requirements
+- Docker & Docker Compose.
+- **Ollama** (Optional but Recommended): [Install Ollama](https://ollama.com/) and run `ollama pull llama3`.
 
-### 2. Setup
-1. Create a `.env` file in the root directory (or update `backend/.env`):
-   ```
-   OPENAI_API_KEY=your_key_here
-   ```
-2. Run the platform:
+### 2. Local Startup
+1. Clone the repository and navigate to the directory.
+2. Initialize the platform:
    ```bash
    docker-compose up --build
    ```
-3. Open [http://localhost:3000](http://localhost:3000) in your browser.
+3. Ensure your local AI endpoint is accessible. By default, it looks for `http://localhost:11434/v1`.
 
-## 📖 Sample Demo Flow
-1. **Input:** Paste a blog URL (e.g., a Medium post or tech blog).
-2. **Generate:** Click "Generate Magic". The AI initiates parallel chains.
-3. **Review:** 
-   - Check **LinkedIn** for professional storytelling.
-   - Check **Instagram** for a slide-by-slide carousel breakdown.
-   - Check **Twitter** for a viral-style thread.
-4. **Optimize:** Look at the "Smart Schedule" and "Engagement Score" to see why the content was generated that way.
+## 🧠 AI Strategy Explanation
+Unlike generic LLM wrappers, this system uses **Platform-Specific Constraints**. For example:
+- **LinkedIn Agent** is forced into a storytelling narrative with hook-first constraints.
+- **IG Carousel Agent** breaks content into atomic slide-sized insights.
+- **Twitter Agent** enforces short, punchy sentence structures.
 
-## 🧠 Assumptions & Design Decisions
-- **Geography:** Defaulted to IST (India Standard Time) as requested for the smart scheduler.
-- **LLM:** Used GPT-4 Turbo for high-quality reasoning and JSON consistency.
-- **Simulated Feedback:** Engagement scores are generated via LLM evaluation relative to platform best practices.
-- **Explainability:** Each output includes a "Strategy Detail" section to explain the AI's internal reasoning.
+## 🏁 Sample Demo Blog
+Ready to test? Try this URL in the source input:
+`https://nextjs.org/blog/next-14`
 
 ---
-*Built with ❤️ for the AI Content Repurposing Hackathon.*
+*Built for the Open-Source Intelligence Community. Privacy is a Feature.*
