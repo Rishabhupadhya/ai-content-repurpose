@@ -1,15 +1,40 @@
 const mongoose = require('mongoose');
 
+/**
+ * =========================
+ * Instagram Slide Schema
+ * =========================
+ */
+const InstagramSlideSchema = new mongoose.Schema(
+  {
+    text: { type: String, required: true },
+    imagePrompt: { type: String, required: true },
+    imageUrl: { type: String, required: true },
+    finalImage: { type: String, required: true } // base64 image
+  },
+  { _id: false }
+);
+
+/**
+ * =========================
+ * Main Content Schema
+ * =========================
+ */
 const ContentSchema = new mongoose.Schema({
   originalUrl: String,
   originalText: String,
-  cleanContent: String,
+  cleanContent: {
+    type: String,
+    required: true
+  },
   title: String,
+
   targetAudience: {
     type: String,
     enum: ['Developers', 'Founders', 'Students', 'Marketers', 'General'],
     default: 'General'
   },
+
   outputs: {
     linkedin: {
       content: String,
@@ -17,24 +42,28 @@ const ContentSchema = new mongoose.Schema({
       score: Number,
       feedback: [String]
     },
+
     instagram: {
-      slides: [String],
+      slides: [InstagramSlideSchema], // ✅ FIXED
       explanation: String,
       score: Number,
       feedback: [String]
     },
+
     twitter: {
       thread: [String],
       explanation: String,
       score: Number,
       feedback: [String]
     },
+
     newsletter: {
       content: String,
       explanation: String,
       score: Number,
       feedback: [String]
     },
+
     seo: {
       title: String,
       metaDescription: String,
@@ -42,12 +71,14 @@ const ContentSchema = new mongoose.Schema({
       explanation: String
     }
   },
+
   scheduling: {
     linkedin: String,
     instagram: String,
     twitter: String,
     newsletter: String
   },
+
   createdAt: {
     type: Date,
     default: Date.now

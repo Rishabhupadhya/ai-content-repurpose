@@ -10,6 +10,8 @@ services:
 
   backend:
     build: ./backend
+    env_file:
+      - ./backend/.env
     ports:
       - "5001:5001"
     environment:

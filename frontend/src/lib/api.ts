@@ -12,6 +12,11 @@ export const generateContent = async (id: string) => {
     return response.data;
 };
 
+export const generatePlatformContent = async (id: string, platform: string) => {
+    const response = await axios.post(`${API_BASE_URL}/generate`, { id, platform });
+    return response.data;
+};
+
 export const getContent = async (id: string) => {
     const response = await axios.get(`${API_BASE_URL}/content/${id}`);
     return response.data;

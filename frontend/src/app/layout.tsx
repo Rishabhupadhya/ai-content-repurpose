@@ -1,12 +1,18 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { Navbar } from "@/components/layout/Navbar";
+import { cn } from "@/lib/utils";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+    subsets: ["latin"],
+    variable: "--font-sans",
+    display: 'swap',
+});
 
 export const metadata: Metadata = {
-    title: "AI Content Repurposer",
-    description: "Transform your blog posts into platform-specific content",
+    title: "Repurpose — AI Content Adaptation Platform",
+    description: "Transform content for every platform. AI handles the adaptation. You stay in control.",
 };
 
 export default function RootLayout({
@@ -15,8 +21,13 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en">
-            <body className={inter.className}>{children}</body>
+        <html lang="en" suppressHydrationWarning>
+            <body className={cn("min-h-screen bg-background font-sans antialiased", inter.variable)}>
+                <Navbar />
+                <main className="pt-20">
+                    {children}
+                </main>
+            </body>
         </html>
     );
 }

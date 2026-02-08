@@ -3,189 +3,308 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 /**
- * AI Content Generation Service - OPEN SOURCE EDITION
- * Uses Llama-3-8B-Instruct via Ollama or Open-Source Inference APIs.
+ * ======================================
+ * AI Content Generation Service
+ * Robust against malformed LLM JSON
+ * ======================================
  */
 
-// Default to local Ollama endpoint, but allow override via ENV
-const AI_MODEL_ENDPOINT = process.env.AI_MODEL_ENDPOINT || 'http://localhost:11434/v1/chat/completions';
-const AI_MODEL_NAME = process.env.AI_MODEL_NAME || 'llama3';
+const AI_MODEL_ENDPOINT =
+    process.env.AI_MODEL_ENDPOINT || 'http://localhost:11434/v1/chat/completions';
 
-const SYSTEM_PROMPT = `You are an expert social media strategist and content repurposer. 
-Your goal is to transform a blog post into highly engaging, platform-specific content. 
-You understand the nuances of LinkedIn, Instagram, Twitter/X, and Newsletters.
-RESPONSE FORMAT: You MUST return valid JSON. No other text.`;
+const AI_MODEL_NAME = process.env.AI_MODEL_NAME || 'mistral';
 
-const cleanJSON = (text) => {
-    // 1. Locate the first '{' and last '}'
-    const startIndex = text.indexOf('{');
-    const endIndex = text.lastIndexOf('}');
+const SYSTEM_PROMPT = `
+You are an expert social media strategist and content repurposer.
 
-    if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
-        return text; // Return original if no JSON structure found
-    }
+CRITICAL RULES:
+- Output ONLY valid JSON
+- Do NOT include markdown
+- Do NOT include explanations outside JSON
+- Escape all newlines as \\n
+- Strings ONLY inside quotes
+`;
 
-    const jsonString = text.substring(startIndex, endIndex + 1);
+/**
+ * ======================================
+ * 🔒 SAFE JSON EXTRACTION + CLEANING
+ * ======================================
+ */
 
-    // 2. State machine to sanitize control characters within strings
-    let cleaned = '';
+// Extract first valid JSON object from text
+const extractJSON = (text) => {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start === -1 || end === -1 || end <= start) return null;
+    return text.slice(start, end + 1);
+};
+
+// Escape illegal characters inside JSON strings
+const sanitizeJSONString = (json) => {
+    let result = '';
     let inString = false;
-    let isEscaped = false;
+    let escaped = false;
 
-    for (let i = 0; i < jsonString.length; i++) {
-        const char = jsonString[i];
+    for (let i = 0; i < json.length; i++) {
+        const char = json[i];
 
-        if (isEscaped) {
-            cleaned += char;
-            isEscaped = false;
+        if (escaped) {
+            result += char;
+            escaped = false;
             continue;
         }
 
         if (char === '\\') {
-            isEscaped = true;
-            cleaned += char;
+            escaped = true;
+            result += char;
             continue;
         }
 
         if (char === '"') {
             inString = !inString;
-            cleaned += char;
+            result += char;
             continue;
         }
 
         if (inString) {
-            if (char === '\n') cleaned += '\\n';
-            else if (char === '\r') cleaned += '\\r';
-            else if (char === '\t') cleaned += '\\t';
-            // Preserve other characters
-            else cleaned += char;
+            if (char === '\n') result += '\\n';
+            else if (char === '\r') result += '\\r';
+            else if (char === '\t') result += '\\t';
+            else result += char;
         } else {
-            cleaned += char;
+            result += char;
         }
     }
 
-    return cleaned;
+    return result;
 };
+
+// Final safe JSON parse
+const safeParseJSON = (raw) => {
+    const extracted = extractJSON(raw);
+    if (!extracted) throw new Error('No JSON object found in LLM output');
+
+    const sanitized = sanitizeJSONString(extracted);
+    return JSON.parse(sanitized);
+};
+
+/**
+ * ======================================
+ * 🔧 DEEP NORMALIZATION (CRITICAL)
+ * ======================================
+ */
+
+const normalizeText = (v) => {
+    if (Array.isArray(v)) return v.join('\n\n');
+    if (typeof v === 'string') return v;
+    if (v === null || v === undefined) return '';
+    return JSON.stringify(v);
+};
+
+const normalizeScore = (score) => {
+    if (typeof score === 'number') return Math.min(Math.max(score, 0), 100);
+
+    if (Array.isArray(score)) {
+        const n = score.find((v) => typeof v === 'number');
+        return n ?? 70;
+    }
+
+    if (typeof score === 'object' && score !== null) {
+        const nums = Object.values(score).filter((v) => typeof v === 'number');
+        if (!nums.length) return 70;
+        return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length);
+    }
+
+    if (typeof score === 'string') {
+        const parsed = parseInt(score, 10);
+        return isNaN(parsed) ? 70 : parsed;
+    }
+
+    return 70;
+};
+
+const normalizeFeedback = (f) => {
+    if (Array.isArray(f)) {
+        return f.flat().map((x) => normalizeText(x));
+    }
+    if (typeof f === 'string') return [f];
+    return [];
+};
+
+/**
+ * ======================================
+ * 🤖 CORE LLM CALL
+ * ======================================
+ */
 
 const callLLM = async (prompt) => {
     try {
         const response = await axios.post(AI_MODEL_ENDPOINT, {
             model: AI_MODEL_NAME,
             messages: [
-                { role: "system", content: SYSTEM_PROMPT },
-                { role: "user", content: prompt }
+                { role: 'system', content: SYSTEM_PROMPT },
+                { role: 'user', content: prompt }
             ],
-            stream: false,
-            format: "json", // Ollama specific JSON mode
-            temperature: 0.7
+            temperature: 0.7,
+            stream: false
         });
 
-        // Handle both OpenAI-compatible and Ollama-native responses
-        const rawContent = response.data.choices
-            ? response.data.choices[0].message.content
-            : response.data.message.content;
+        const raw =
+            response.data?.choices?.[0]?.message?.content ||
+            response.data?.message?.content;
 
-        const cleanContent = cleanJSON(rawContent);
+        const parsed = safeParseJSON(raw);
 
-        try {
-            return JSON.parse(cleanContent);
-        } catch (parseError) {
-            console.error('JSON Parse Error:', parseError.message);
-            console.error('Raw Content that failed:', rawContent);
-            console.error('Cleaned Content that failed:', cleanContent);
-            throw parseError; // Re-throw to hit the outer catch or be handled
-        }
-    } catch (error) {
-        console.error('LLM Call Error:', error.message);
-        // Fallback logic for demo purposes if LLM is unavailable
+        // 🔥 NORMALIZE ONLY EXISTING FIELDS
+        const output = {};
+
+        if (parsed.content !== undefined)
+            output.content = normalizeText(parsed.content);
+
+        if (parsed.slides !== undefined)
+            output.slides = Array.isArray(parsed.slides)
+                ? parsed.slides.map(normalizeText)
+                : [];
+
+        if (parsed.thread !== undefined)
+            output.thread = Array.isArray(parsed.thread)
+                ? parsed.thread.map(normalizeText)
+                : [];
+
+        if (parsed.explanation !== undefined)
+            output.explanation = normalizeText(parsed.explanation);
+
+        if (parsed.score !== undefined)
+            output.score = normalizeScore(parsed.score);
+
+        if (parsed.feedback !== undefined)
+            output.feedback = normalizeFeedback(parsed.feedback);
+
+        if (parsed.title !== undefined)
+            output.title = normalizeText(parsed.title);
+
+        if (parsed.metaDescription !== undefined)
+            output.metaDescription = normalizeText(parsed.metaDescription);
+
+        if (parsed.keywords !== undefined)
+            output.keywords = Array.isArray(parsed.keywords)
+                ? parsed.keywords.map(normalizeText)
+                : [];
+
+        return output;
+
+    } catch (err) {
+        console.error('❌ LLM JSON FAILURE');
+        console.error(err.message);
+
         return {
-            content: "Error: AI engine unreachable or returned invalid JSON. ensure Ollama is running and model is loaded.",
             error: true,
-            details: error.message
+            explanation: 'LLM returned invalid JSON',
+            score: 0,
+            feedback: ['Parsing failed']
         };
     }
 };
 
-const generateLinkedIn = async (content, audience) => {
-    const prompt = `Repurpose this blog for LinkedIn. 
-  Target Audience: ${audience}
-  Requirements:
-  - Story-driven approach
-  - Strong hook in the first 2 lines
-  - Professional but conversational tone
-  - Ends with a discussion-starting question
-  - Internal explanation of why this format works for LinkedIn
-  
-  Content: ${content}
 
-  Return as JSON with keys: "content", "explanation", "score", "feedback" (array of strings).`;
+/**
+ * ======================================
+ * PLATFORM GENERATORS
+ * ======================================
+ */
 
-    return await callLLM(prompt);
-};
+const generateLinkedIn = async (content, audience) =>
+    callLLM(`
+Repurpose this blog for LinkedIn.
 
-const generateInstagram = async (content, audience) => {
-    const prompt = `Repurpose this blog for an Instagram Carousel (6-8 slides).
-  Target Audience: ${audience}
-  Requirements:
-  - Slide 1: Bold hook
-  - Slides 2-7: One specific insight or tip per slide
-  - Final Slide: CTA to read the full blog
-  - High visual focus in descriptions
-  - Internal explanation of why this format works for Instagram
+Audience: ${audience}
 
-  Content: ${content}
-  
-  Return as JSON with keys: "slides" (array), "explanation", "score", "feedback" (array).`;
+Requirements:
+- Strong hook
+- Story-driven
+- Ends with a question
 
-    return await callLLM(prompt);
-};
+Return JSON:
+{
+  "content": string | array,
+  "explanation": string | array,
+  "score": number | object,
+  "feedback": array
+}
 
-const generateTwitter = async (content, audience) => {
-    const prompt = `Repurpose this blog for a Twitter/X Thread.
-  Target Audience: ${audience}
-  Requirements:
-  - 1 hook tweet
-  - 5-7 short, punchy, value-packed tweets
-  - Thread-style formatting
-  - Internal explanation of why this format works for Twitter/X
+Content:
+${content}
+`);
 
-  Content: ${content}
-  
-  Return as JSON with keys: "thread" (array), "explanation", "score", "feedback" (array).`;
+const generateInstagram = async (content, audience) =>
+    callLLM(`
+Repurpose this blog for an Instagram carousel (6–8 slides).
 
-    return await callLLM(prompt);
-};
+Audience: ${audience}
 
-const generateNewsletter = async (content, audience) => {
-    const prompt = `Repurpose this blog for a Newsletter.
-  Target Audience: ${audience}
-  Requirements:
-  - Short-form, friendly, and conversational
-  - TL;DR at the top
-  - Key takeaways summarized
-  - Internal explanation of why this format works for Newsletters
+Return JSON:
+{
+  "slides": array,
+  "explanation": string | array,
+  "score": number | object,
+  "feedback": array
+}
 
-  Content: ${content}
-  
-  Return as JSON with keys: "content", "explanation", "score", "feedback" (array).`;
+Content:
+${content}
+`);
 
-    return await callLLM(prompt);
-};
+const generateTwitter = async (content, audience) =>
+    callLLM(`
+Repurpose this blog for a Twitter/X thread.
 
-const generateSEO = async (content) => {
-    const prompt = `Generate SEO metadata for this content.
-  Requirements:
-  - SEO-optimized title
-  - Meta description (max 160 chars)
-  - 5-7 keyword suggestions
-  - Internal explanation of SEO strategy
+Audience: ${audience}
 
-  Content: ${content}
-  
-  Return as JSON with keys: "title", "metaDescription", "keywords" (array), "explanation".`;
+Return JSON:
+{
+  "thread": array,
+  "explanation": string | array,
+  "score": number | object,
+  "feedback": array
+}
 
-    return await callLLM(prompt);
-};
+Content:
+${content}
+`);
+
+const generateNewsletter = async (content, audience) =>
+    callLLM(`
+Repurpose this blog for a newsletter.
+
+Audience: ${audience}
+
+Return JSON:
+{
+  "content": string | array,
+  "explanation": string | array,
+  "score": number | object,
+  "feedback": array
+}
+
+Content:
+${content}
+`);
+
+const generateSEO = async (content) =>
+    callLLM(`
+Generate SEO metadata.
+
+Return JSON:
+{
+  "title": string,
+  "metaDescription": string,
+  "keywords": array,
+  "explanation": string
+}
+
+Content:
+${content}
+`);
 
 module.exports = {
     generateLinkedIn,
