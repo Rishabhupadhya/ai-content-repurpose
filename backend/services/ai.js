@@ -31,12 +31,49 @@ CRITICAL RULES:
  * ======================================
  */
 
-// Extract first valid JSON object from text
+// Extract first valid JSON object from text (handles extra braces in content)
 const extractJSON = (text) => {
-    const start = text.indexOf('{');
-    const end = text.lastIndexOf('}');
-    if (start === -1 || end === -1 || end <= start) return null;
-    return text.slice(start, end + 1);
+    if (!text) return null;
+
+    let inString = false;
+    let escaped = false;
+    let depth = 0;
+    let start = -1;
+
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+
+        if (escaped) {
+            escaped = false;
+            continue;
+        }
+
+        if (char === '\\') {
+            escaped = true;
+            continue;
+        }
+
+        if (char === '"') {
+            inString = !inString;
+            continue;
+        }
+
+        if (inString) continue;
+
+        if (char === '{') {
+            if (depth === 0) start = i;
+            depth++;
+        } else if (char === '}') {
+            if (depth > 0) {
+                depth--;
+                if (depth === 0 && start !== -1) {
+                    return text.slice(start, i + 1);
+                }
+            }
+        }
+    }
+
+    return null;
 };
 
 // Escape illegal characters inside JSON strings
@@ -161,10 +198,30 @@ const callLLM = async (prompt) => {
         if (parsed.content !== undefined)
             output.content = normalizeText(parsed.content);
 
-        if (parsed.slides !== undefined)
-            output.slides = Array.isArray(parsed.slides)
-                ? parsed.slides.map(normalizeText)
-                : [];
+        if (parsed.slides !== undefined) {
+            if (Array.isArray(parsed.slides)) {
+                output.slides = parsed.slides.map((slide) => {
+                    if (typeof slide === 'string') {
+                        return {
+                            text: normalizeText(slide),
+                            imagePrompt: ''
+                        };
+                    }
+                    if (slide && typeof slide === 'object') {
+                        return {
+                            text: normalizeText(slide.text),
+                            imagePrompt: normalizeText(slide.imagePrompt || '')
+                        };
+                    }
+                    return {
+                        text: normalizeText(slide),
+                        imagePrompt: ''
+                    };
+                });
+            } else {
+                output.slides = [];
+            }
+        }
 
         if (parsed.thread !== undefined)
             output.thread = Array.isArray(parsed.thread)

@@ -4,21 +4,21 @@
 
 @layer base {
   :root {
-    /* Paper & Ink Color System */
-    --paper: 0 0% 98%;
-    --ink: 220 13% 13%;
-    --ink-light: 220 9% 46%;
-    --ink-lighter: 220 9% 65%;
+    /* Premium Night Paper & Ink */
+    --paper: 222 47% 7%;        /* deep navy background */
+    --ink: 210 40% 98%;         /* almost-white text */
+    --ink-light: 215 20% 82%;   /* soft secondary text */
+    --ink-lighter: 215 16% 65%; /* muted text */
     
-    /* Accent - Electric Indigo (used sparingly) */
-    --accent: 239 84% 67%;
-    --accent-hover: 243 75% 59%;
+    /* Accent - Premium teal */
+    --accent: 190 92% 55%;        /* cyan/teal primary */
+    --accent-hover: 190 96% 62%;  /* brighter teal hover */
     
     /* Surfaces */
-    --surface: 0 0% 100%;
-    --surface-raised: 0 0% 100%;
-    --border: 220 13% 91%;
-    --border-strong: 220 13% 85%;
+    --surface: 222 47% 11%;       /* card background */
+    --surface-raised: 222 47% 14%;
+    --border: 223 15% 25%;
+    --border-strong: 223 20% 32%;
     
     /* Semantic Colors */
     --success: 142 71% 45%;
@@ -46,18 +46,19 @@
   }
 
   .dark {
-    --paper: 220 13% 9%;
-    --ink: 220 9% 98%;
-    --ink-light: 220 9% 65%;
-    --ink-lighter: 220 9% 46%;
+    /* Slightly brighter premium variant for dark mode */
+    --paper: 222 47% 9%;
+    --ink: 210 40% 98%;
+    --ink-light: 215 20% 82%;
+    --ink-lighter: 215 16% 65%;
     
-    --accent: 239 84% 67%;
-    --accent-hover: 243 75% 59%;
+    --accent: 190 92% 55%;
+    --accent-hover: 190 96% 62%;
     
-    --surface: 220 13% 11%;
-    --surface-raised: 220 13% 13%;
-    --border: 220 13% 18%;
-    --border-strong: 220 13% 24%;
+    --surface: 222 47% 13%;
+    --surface-raised: 222 47% 16%;
+    --border: 223 15% 28%;
+    --border-strong: 223 20% 36%;
     
     --background: var(--paper);
     --foreground: var(--ink);

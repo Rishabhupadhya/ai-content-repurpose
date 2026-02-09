@@ -16,9 +16,9 @@ interface InputSectionProps {
 }
 
 const audienceOptions = [
-    { value: 'Developers', icon: Sparkles, color: 'from-blue-500 to-cyan-500' },
-    { value: 'Founders', icon: TrendingUp, color: 'from-purple-500 to-pink-500' },
-    { value: 'Marketers', icon: Briefcase, color: 'from-orange-500 to-red-500' },
+    { value: 'Developers', icon: Sparkles, color: 'from-[hsl(var(--accent))] to-cyan-400' },
+    { value: 'Founders', icon: TrendingUp, color: 'from-[hsl(var(--accent))] to-emerald-400' },
+    { value: 'Marketers', icon: Briefcase, color: 'from-[hsl(var(--accent))] to-sky-400' },
 ];
 
 export const InputSection: React.FC<InputSectionProps> = ({

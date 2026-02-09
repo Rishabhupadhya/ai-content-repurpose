@@ -6,6 +6,7 @@ import { Hero } from "@/components/landing/Hero";
 import { InputSection } from "@/components/dashboard/InputSection";
 import { ResultsSection } from "@/components/dashboard/ResultsSection";
 import { PlatformTabs, Platform } from "@/components/dashboard/PlatformTabs";
+import { VisualShowcase } from "@/components/dashboard/VisualShowcase";
 import { AnimatePresence, motion } from "framer-motion";
 
 /* ---------------- TYPES ---------------- */
@@ -116,6 +117,8 @@ export default function Home() {
         }));
     };
 
+    const shouldCenterInput = !contentId && !results;
+
     /* ---------------- UI ---------------- */
     return (
         <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
@@ -132,53 +135,85 @@ export default function Home() {
                         className="space-y-16"
                     >
                         {/* INPUT */}
-                        <InputSection
-                            url={url}
-                            setUrl={setUrl}
-                            text={text}
-                            setText={setText}
-                            audience={audience}
-                            setAudience={setAudience}
-                            onIngest={handleIngest}
-                            loading={loading}
-                        />
+                        {shouldCenterInput ? (
+                            <div className="min-h-[calc(100vh-6rem)] flex items-center">
+                                <InputSection
+                                    url={url}
+                                    setUrl={setUrl}
+                                    text={text}
+                                    setText={setText}
+                                    audience={audience}
+                                    setAudience={setAudience}
+                                    onIngest={handleIngest}
+                                    loading={loading}
+                                />
+                            </div>
+                        ) : (
+                            <InputSection
+                                url={url}
+                                setUrl={setUrl}
+                                text={text}
+                                setText={setText}
+                                audience={audience}
+                                setAudience={setAudience}
+                                onIngest={handleIngest}
+                                loading={loading}
+                            />
+                        )}
 
-                        {/* BUTTONS */}
+                        {/* BUTTONS - Premium glass dock style */}
                         {contentId && (
-                            <div className="max-w-5xl mx-auto px-6 space-y-6">
+                            <div className="max-w-5xl mx-auto px-6 space-y-5">
                                 {/* Generate All */}
-                                <button
+                                <motion.button
                                     onClick={generateAll}
-                                    className="w-full bg-black text-white py-3 rounded-xl font-semibold hover:bg-gray-900"
+                                    whileHover={{ scale: 1.01, y: -1 }}
+                                    whileTap={{ scale: 0.99 }}
+                                    className="w-full h-14 rounded-2xl bg-gradient-to-r from-[hsl(var(--accent))] via-cyan-400 to-emerald-400 text-white font-semibold shadow-[0_18px_70px_rgba(34,211,238,0.45)] hover:shadow-[0_22px_80px_rgba(34,211,238,0.7)] transition-shadow relative overflow-hidden"
                                 >
-                                    Generate All Platforms
-                                </button>
+                                    <span className="relative z-10">
+                                        Generate All Platforms
+                                    </span>
+                                    <motion.div
+                                        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-white/10 via-transparent to-white/10"
+                                        initial={{ x: "-100%" }}
+                                        animate={{ x: "100%" }}
+                                        transition={{ duration: 2.2, repeat: Infinity, ease: "linear" }}
+                                    />
+                                </motion.button>
 
                                 {/* INDIVIDUAL PLATFORM BUTTONS */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                    {PLATFORMS.map((p) => (
-                                        <button
-                                            key={p}
-                                            onClick={() => generateOne(p)}
-                                            disabled={status[p] === "loading"}
-                                            className={`flex items-center justify-between px-4 py-3 rounded-xl border transition
-                        ${status[p] === "success"
-                                                    ? "bg-green-50 border-green-200 text-green-700"
-                                                    : status[p] === "error"
-                                                        ? "bg-red-50 border-red-200 text-red-700"
-                                                        : "bg-white hover:bg-gray-50"
-                                                }`}
-                                        >
-                                            <span className="capitalize font-medium">{p}</span>
-                                            <span className="text-xs opacity-70">
-                                                {status[p] === "loading"
-                                                    ? "Generating…"
-                                                    : status[p] === "success"
-                                                        ? "Done"
-                                                        : "Generate"}
-                                            </span>
-                                        </button>
-                                    ))}
+                                <div className="relative">
+                                    <div className="absolute inset-0 blur-xl bg-gradient-to-r from-[hsl(var(--accent))/0.18] via-transparent to-emerald-400/20 pointer-events-none" />
+                                    <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 rounded-3xl bg-white/70 dark:bg-zinc-900/60 border border-white/40 backdrop-blur-2xl p-4">
+                                        {PLATFORMS.map((p) => (
+                                            <motion.button
+                                                key={p}
+                                                onClick={() => generateOne(p)}
+                                                disabled={status[p] === "loading"}
+                                                whileHover={{ y: -3, scale: 1.02 }}
+                                                whileTap={{ scale: 0.97 }}
+                                                className={`flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-medium border transition-colors
+                                                ${status[p] === "success"
+                                                        ? "bg-emerald-50/80 border-emerald-200 text-emerald-700"
+                                                        : status[p] === "error"
+                                                            ? "bg-red-50/80 border-red-200 text-red-700"
+                                                            : "bg-white/60 dark:bg-zinc-900/70 border-white/40 hover:border-indigo-400/70"
+                                                    }`}
+                                            >
+                                                <span className="capitalize">
+                                                    {p}
+                                                </span>
+                                                <span className="text-[11px] opacity-80">
+                                                    {status[p] === "loading"
+                                                        ? "Generating…"
+                                                        : status[p] === "success"
+                                                            ? "Ready"
+                                                            : "Generate"}
+                                                </span>
+                                            </motion.button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -193,7 +228,7 @@ export default function Home() {
 
                         {/* RESULTS */}
                         {results && (
-                            <div className="space-y-8 pt-12 border-t border-border">
+                            <div className="space-y-12 pt-12 border-t border-border">
                                 <PlatformTabs
                                     activeTab={activeTab}
                                     setActiveTab={setActiveTab}
@@ -205,6 +240,8 @@ export default function Home() {
                                     onUpdateContent={updateEditedContent}
                                     loading={false}
                                 />
+                                {/* Animated visual showcase: flip text, masked avatars, glass dock, perspective grid, 3D text */}
+                                <VisualShowcase />
                             </div>
                         )}
                     </motion.div>

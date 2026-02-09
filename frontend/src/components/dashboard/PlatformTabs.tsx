@@ -14,35 +14,54 @@ interface PlatformTabsProps {
 
 export const PlatformTabs: React.FC<PlatformTabsProps> = ({ activeTab, setActiveTab }) => {
     const tabs: { id: Platform; icon: React.ReactNode; label: string; color: string }[] = [
-        { id: 'linkedin', icon: <Linkedin className="w-5 h-5" />, label: 'LinkedIn', color: 'text-blue-600' },
-        { id: 'instagram', icon: <Instagram className="w-5 h-5" />, label: 'Instagram', color: 'text-pink-600' },
-        { id: 'twitter', icon: <Twitter className="w-5 h-5" />, label: 'Twitter', color: 'text-sky-500' },
-        { id: 'newsletter', icon: <Mail className="w-5 h-5" />, label: 'Newsletter', color: 'text-emerald-500' },
-        { id: 'seo', icon: <Search className="w-5 h-5" />, label: 'SEO', color: 'text-orange-500' },
+        { id: 'linkedin', icon: <Linkedin className="w-5 h-5" />, label: 'LinkedIn', color: 'text-[hsl(var(--accent))]' },
+        { id: 'instagram', icon: <Instagram className="w-5 h-5" />, label: 'Instagram', color: 'text-[hsl(var(--accent))]' },
+        { id: 'twitter', icon: <Twitter className="w-5 h-5" />, label: 'Twitter', color: 'text-[hsl(var(--accent))]' },
+        { id: 'newsletter', icon: <Mail className="w-5 h-5" />, label: 'Newsletter', color: 'text-[hsl(var(--accent))]' },
+        { id: 'seo', icon: <Search className="w-5 h-5" />, label: 'SEO', color: 'text-[hsl(var(--accent))]' },
     ];
 
     return (
         <div className="flex justify-center border-b border-white/10 overflow-x-auto pb-px gap-8">
             {tabs.map((tab) => (
-                <button
+                <motion.button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
+                    whileHover={{ y: -2, opacity: 1 }}
+                    whileTap={{ scale: 0.96 }}
                     className={`
                         relative flex items-center gap-2 pb-4 text-sm font-bold uppercase tracking-widest transition-all
-                        ${activeTab === tab.id ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}
+                        ${activeTab === tab.id
+                            ? 'text-foreground'
+                            : 'text-muted-foreground hover:text-foreground'}
                     `}
                 >
-                    <span className={activeTab === tab.id ? tab.color : ''}>
+                    <span
+                        className={`
+                            inline-flex items-center justify-center rounded-full px-2 py-1 text-xs font-semibold transition-colors
+                            ${activeTab === tab.id
+                                ? `${tab.color} bg-white/10`
+                                : 'text-muted-foreground/80'}
+                        `}
+                    >
                         {tab.icon}
                     </span>
-                    {tab.label}
+                    <span className="relative">
+                        {tab.label}
+                        {activeTab === tab.id && (
+                            <motion.span
+                                layoutId="activeTabLabel"
+                                className="absolute -bottom-1 left-0 right-0 h-px bg-gradient-to-r from-[hsl(var(--accent))/0.7] to-emerald-400/70"
+                            />
+                        )}
+                    </span>
                     {activeTab === tab.id && (
                         <motion.div
                             layoutId="activeTab"
-                            className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-t-full"
+                            className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-[hsl(var(--accent))] to-emerald-400 rounded-t-full"
                         />
                     )}
-                </button>
+                </motion.button>
             ))}
         </div>
     );

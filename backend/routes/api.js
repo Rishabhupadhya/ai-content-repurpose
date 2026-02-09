@@ -126,24 +126,30 @@ router.post('/generate', async (req, res) => {
         entry.outputs = entry.outputs || {};
         entry.scheduling = entry.scheduling || {};
 
-        /**
-         * ======================================
-         * 🔥 INSTAGRAM SPECIAL HANDLING
-         * ======================================
-         */
         if (platform === 'instagram') {
+            /**
+             * ======================================
+             * 🔥 INSTAGRAM SPECIAL HANDLING
+             * ======================================
+             */
             const finalSlides = [];
 
             for (const slide of raw.slides || []) {
-                const imageUrl = await generateImage(slide.imagePrompt);
+                const text = typeof slide === 'string' ? slide : slide.text;
+                const imagePrompt =
+                    typeof slide === 'object' && slide !== null
+                        ? slide.imagePrompt || ''
+                        : '';
+
+                const imageUrl = await generateImage(imagePrompt);
                 const finalImage = await composeInstagramSlide(
                     imageUrl,
-                    slide.text
+                    text
                 );
 
                 finalSlides.push({
-                    text: slide.text,
-                    imagePrompt: slide.imagePrompt,
+                    text,
+                    imagePrompt,
                     imageUrl,
                     finalImage
                 });
@@ -155,14 +161,29 @@ router.post('/generate', async (req, res) => {
                 score: normalizeScore(raw.score),
                 feedback: normalizeFeedback(raw.feedback)
             };
-        }
-
-        /**
-         * ======================================
-         * 🔵 ALL OTHER PLATFORMS
-         * ======================================
-         */
-        else {
+        } else if (platform === 'seo') {
+            /**
+             * ======================================
+             * 🟠 SEO SPECIAL HANDLING
+             * ======================================
+             * Keep title/metaDescription/keywords structure for the editor
+             */
+            entry.outputs.seo = {
+                title: normalizeContent(raw.title),
+                metaDescription: normalizeContent(raw.metaDescription),
+                keywords: Array.isArray(raw.keywords)
+                    ? raw.keywords.map(String)
+                    : [],
+                explanation: normalizeContent(raw.explanation),
+                score: normalizeScore(raw.score),
+                feedback: normalizeFeedback(raw.feedback)
+            };
+        } else {
+            /**
+             * ======================================
+             * 🔵 ALL OTHER PLATFORMS
+             * ======================================
+             */
             entry.outputs[platform] = {
                 content: normalizeContent(raw.content),
                 explanation: normalizeContent(raw.explanation),
