@@ -5,6 +5,7 @@ dotenv.config();
 
 const AI_MODEL_ENDPOINT = process.env.AI_MODEL_ENDPOINT || 'http://localhost:11434/v1/chat/completions';
 const AI_MODEL_NAME = process.env.AI_MODEL_NAME || 'mistral';
+const AI_API_KEY = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY || '';
 
 /**
  * ======================================
@@ -132,6 +133,8 @@ Return ONLY valid JSON. No conversational text.
   "core_claims": ["list of strings"]
 }`;
 
+    const headers = AI_API_KEY ? { 'Authorization': `Bearer ${AI_API_KEY}` } : {};
+
     const response = await axios.post(AI_MODEL_ENDPOINT, {
         model: AI_MODEL_NAME,
         messages: [
@@ -144,7 +147,7 @@ Return ONLY valid JSON. No conversational text.
             num_ctx: 16384,
             num_predict: 2048
         }
-    });
+    }, { headers });
 
     const raw = response.data?.choices?.[0]?.message?.content || response.data?.message?.content;
     const parsed = safeParseJSON(raw);
@@ -168,6 +171,8 @@ Return ONLY valid JSON. No conversational text.
 const callSynthesizer = async (facts, platformPrompt) => {
     try {
         console.log("🎨 Stage 2: Generating stylistic variation...");
+        const headers = AI_API_KEY ? { 'Authorization': `Bearer ${AI_API_KEY}` } : {};
+
         const response = await axios.post(AI_MODEL_ENDPOINT, {
             model: AI_MODEL_NAME,
             messages: [
@@ -181,7 +186,7 @@ const callSynthesizer = async (facts, platformPrompt) => {
                 num_ctx: 10240, // Increase context for long outputs
                 num_predict: 4096 // Double the limit to avoid truncation
             }
-        });
+        }, { headers });
 
         const raw = response.data?.choices?.[0]?.message?.content || response.data?.message?.content;
 

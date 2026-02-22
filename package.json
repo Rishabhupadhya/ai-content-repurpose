@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
+    "mongodb": "^7.1.0",
     "replicate": "^1.4.0"
   }
 }
