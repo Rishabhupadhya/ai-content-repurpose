@@ -57,7 +57,7 @@ export const Hero = ({ onStart, onViewExamples }: { onStart: () => void, onViewE
 
                     {/* Hero headline - more dramatic */}
                     <div className="space-y-4">
-                        <h1 className="text-[56px] md:text-[72px] leading-[0.95] font-bold tracking-tight text-ink">
+                        <h1 className="text-[42px] sm:text-[56px] md:text-[72px] leading-[1.05] sm:leading-[0.95] font-bold tracking-tight text-ink">
                             One post.
                             <br />
                             <span className="text-ink-light">Every platform.</span>

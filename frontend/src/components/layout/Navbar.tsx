@@ -60,14 +60,14 @@ export const Navbar = () => {
                             <span className="font-semibold text-sm uppercase tracking-[0.28em] text-ink-lighter">
                                 REPURPOSE
                             </span>
-                            <span className="text-[13px] font-medium text-ink-light">
+                            <span className="hidden sm:inline text-[13px] font-medium text-ink-light">
                                 Multi‑platform content studio
                             </span>
                         </div>
                     </button>
 
-                    {/* Center nav */}
-                    <div className="flex items-center gap-4 md:gap-6 px-4 py-1.5 rounded-full bg-white/10 border border-white/10 backdrop-blur-xl">
+                    {/* Center nav - Hidden on small screens */}
+                    <div className="hidden lg:flex items-center gap-4 md:gap-6 px-4 py-1.5 rounded-full bg-white/10 border border-white/10 backdrop-blur-xl">
                         {navItems.map((item) => (
                             <button
                                 key={item}
@@ -80,11 +80,12 @@ export const Navbar = () => {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
                         <a
                             href="https://github.com/Rishabhupadhya"
                             target="_blank"
                             rel="noopener noreferrer"
+                            className="hidden sm:block"
                         >
                             <Button
                                 variant="ghost"
@@ -98,9 +99,9 @@ export const Navbar = () => {
                             onClick={triggerReset}
                             variant="premium"
                             size="lg"
-                            className="rounded-full h-10 px-5 text-xs tracking-[0.18em] uppercase"
+                            className="rounded-full h-9 sm:h-10 px-4 sm:px-5 text-[10px] sm:text-xs tracking-[0.18em] uppercase"
                         >
-                            <Zap className="w-3 h-3 mr-2" />
+                            <Zap className="w-3 h-3 mr-1 sm:mr-2" />
                             Launch Studio
                         </Button>
                     </div>

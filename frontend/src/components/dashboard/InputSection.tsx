@@ -154,10 +154,10 @@ export const InputSection: React.FC<InputSectionProps> = ({
 
                     {/* Premium audience selector */}
                     <div className="space-y-4">
-                        <label className="block text-label text-ink font-semibold">
+                        <label className="block text-label text-ink font-semibold text-center sm:text-left">
                             Target audience
                         </label>
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             {audienceOptions.map((option) => {
                                 const Icon = option.icon;
                                 const isSelected = audience === option.value;
@@ -168,7 +168,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
                                         onClick={() => setAudience(option.value)}
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
-                                        className={`relative h-24 rounded-xl border-2 transition-all overflow-hidden ${isSelected
+                                        className={`relative h-16 sm:h-24 rounded-xl border-2 transition-all overflow-hidden ${isSelected
                                             ? 'border-accent bg-accent/5 shadow-lg shadow-accent/10'
                                             : 'border-[hsl(var(--border))] hover:border-[hsl(var(--border-strong))] bg-surface'
                                             }`}
@@ -181,7 +181,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
                                             />
                                         )}
 
-                                        <div className="relative z-10 h-full flex flex-col items-center justify-center gap-2">
+                                        <div className="relative z-10 h-full flex flex-row sm:flex-col items-center justify-center gap-3 sm:gap-2 px-4 sm:px-0">
                                             <Icon className={`w-5 h-5 ${isSelected ? 'text-accent' : 'text-ink-lighter'
                                                 }`} />
                                             <span className={`text-sm font-medium ${isSelected ? 'text-ink' : 'text-ink-lighter'

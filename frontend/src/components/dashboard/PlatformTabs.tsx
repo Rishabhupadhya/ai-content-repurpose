@@ -22,7 +22,7 @@ export const PlatformTabs: React.FC<PlatformTabsProps> = ({ activeTab, setActive
     ];
 
     return (
-        <div className="flex justify-center border-b border-white/10 overflow-x-auto pb-px gap-8">
+        <div className="flex justify-start sm:justify-center border-b border-white/10 overflow-x-auto pb-px gap-4 sm:gap-8 px-4 sm:px-0 no-scrollbar">
             {tabs.map((tab) => (
                 <motion.button
                     key={tab.id}

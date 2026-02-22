@@ -259,7 +259,7 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
                                 animate={{ opacity: 0.6 }}
                                 transition={{ duration: 1.2, repeat: Infinity, repeatType: "reverse" }}
                             />
-                            <div className="relative flex items-center justify-between p-4 border-b border-white/10">
+                            <div className="relative flex flex-col sm:flex-row items-center justify-between p-4 gap-4 border-b border-white/10">
                                 <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                                     <Edit3 className="w-4 h-4" /> Editor
                                 </h3>
@@ -267,13 +267,13 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
                                     size="sm"
                                     variant="outline"
                                     onClick={() => copyToClipboard(currentEdit)}
-                                    className="h-8 text-xs font-bold uppercase tracking-wider"
+                                    className="w-full sm:w-auto h-8 text-xs font-bold uppercase tracking-wider"
                                 >
                                     {isCopying ? <Check className="w-3 h-3 mr-2" /> : <Copy className="w-3 h-3 mr-2" />}
                                     {isCopying ? "Copied" : "Copy"}
                                 </Button>
                             </div>
-                            <CardContent className="relative p-8">
+                            <CardContent className="relative p-4 sm:p-8">
                                 {renderEditor()}
                             </CardContent>
                         </Card>
