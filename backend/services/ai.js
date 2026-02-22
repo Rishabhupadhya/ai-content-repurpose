@@ -133,34 +133,42 @@ Return ONLY valid JSON. No conversational text.
   "core_claims": ["list of strings"]
 }`;
 
-    const headers = AI_API_KEY ? { 'Authorization': `Bearer ${AI_API_KEY}` } : {};
+    const headers = AI_API_KEY ? { 'Authorization': `Bearer ${AI_API_KEY}`, 'Content-Type': 'application/json' } : {};
 
-    const response = await axios.post(AI_MODEL_ENDPOINT, {
+    const body = {
         model: AI_MODEL_NAME,
         messages: [
             { role: 'system', content: 'You are a precision data extraction engine. You MUST respond with ONLY valid JSON and nothing else.' },
             { role: 'user', content: `${prompt}\n\nCONTENT:\n${truncatedContent}` }
         ],
         temperature: 0.1,
-        response_format: { type: 'json_object' },
-        options: {
-            num_ctx: 16384,
-            num_predict: 2048
-        }
-    }, { headers });
-
-    const raw = response.data?.choices?.[0]?.message?.content || response.data?.message?.content;
-    const parsed = safeParseJSON(raw);
-
-    // 🧠 PRUNING: Limit to top 25 of each category to prevent context bloating in Stage 2
-    const pruned = {
-        facts: (parsed.facts || []).slice(0, 25),
-        statistics: (parsed.statistics || []).slice(0, 25),
-        core_claims: (parsed.core_claims || []).slice(0, 25)
+        response_format: { type: 'json_object' }
     };
 
-    FactCache.set(hash, pruned);
-    return pruned;
+    // Use Ollama options ONLY if no API key is present
+    if (!AI_API_KEY) {
+        body.options = { num_ctx: 16384, num_predict: 2048 };
+    } else {
+        body.max_tokens = 2048;
+    }
+
+    try {
+        const response = await axios.post(AI_MODEL_ENDPOINT, body, { headers, timeout: 60000 });
+        const raw = response.data?.choices?.[0]?.message?.content || response.data?.message?.content;
+        const parsed = safeParseJSON(raw);
+
+        const pruned = {
+            facts: (parsed.facts || []).slice(0, 25),
+            statistics: (parsed.statistics || []).slice(0, 25),
+            core_claims: (parsed.core_claims || []).slice(0, 25)
+        };
+
+        FactCache.set(hash, pruned);
+        return pruned;
+    } catch (err) {
+        console.error('❌ Stage 1 Fact Extraction Failure:', err.response?.data || err.message);
+        throw err;
+    }
 };
 
 /**
@@ -171,9 +179,9 @@ Return ONLY valid JSON. No conversational text.
 const callSynthesizer = async (facts, platformPrompt) => {
     try {
         console.log("🎨 Stage 2: Generating stylistic variation...");
-        const headers = AI_API_KEY ? { 'Authorization': `Bearer ${AI_API_KEY}` } : {};
+        const headers = AI_API_KEY ? { 'Authorization': `Bearer ${AI_API_KEY}`, 'Content-Type': 'application/json' } : {};
 
-        const response = await axios.post(AI_MODEL_ENDPOINT, {
+        const body = {
             model: AI_MODEL_NAME,
             messages: [
                 { role: 'system', content: 'You are an expert social media strategist. Output MUST be valid JSON.' },
@@ -181,13 +189,17 @@ const callSynthesizer = async (facts, platformPrompt) => {
             ],
             temperature: 0.7,
             top_p: 0.9,
-            response_format: { type: 'json_object' },
-            options: {
-                num_ctx: 10240, // Increase context for long outputs
-                num_predict: 4096 // Double the limit to avoid truncation
-            }
-        }, { headers });
+            response_format: { type: 'json_object' }
+        };
 
+        // Use Ollama options ONLY if no API key is present
+        if (!AI_API_KEY) {
+            body.options = { num_ctx: 10240, num_predict: 4096 };
+        } else {
+            body.max_tokens = 4096;
+        }
+
+        const response = await axios.post(AI_MODEL_ENDPOINT, body, { headers, timeout: 90000 });
         const raw = response.data?.choices?.[0]?.message?.content || response.data?.message?.content;
 
         if (!raw || raw.trim() === '') {
