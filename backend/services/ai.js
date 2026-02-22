@@ -3,8 +3,8 @@ const dotenv = require('dotenv');
 const crypto = require('crypto');
 dotenv.config();
 
-const AI_MODEL_ENDPOINT = process.env.AI_MODEL_ENDPOINT || 'http://localhost:11434/v1/chat/completions';
-const AI_MODEL_NAME = process.env.AI_MODEL_NAME || 'mistral';
+const AI_MODEL_ENDPOINT = process.env.AI_MODEL_ENDPOINT || 'https://api.groq.com/openai/v1/chat/completions';
+const AI_MODEL_NAME = process.env.AI_MODEL_NAME || 'llama-3.3-70b-versatile';
 const AI_API_KEY = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY || '';
 
 /**
@@ -155,6 +155,9 @@ Return ONLY valid JSON. No conversational text.
     try {
         const response = await axios.post(AI_MODEL_ENDPOINT, body, { headers, timeout: 60000 });
         const raw = response.data?.choices?.[0]?.message?.content || response.data?.message?.content;
+
+        if (!raw) throw new Error('Empty response from Stage 1');
+
         const parsed = safeParseJSON(raw);
 
         const pruned = {
@@ -167,7 +170,12 @@ Return ONLY valid JSON. No conversational text.
         return pruned;
     } catch (err) {
         console.error('❌ Stage 1 Fact Extraction Failure:', err.response?.data || err.message);
-        throw err;
+        // Fallback: Return empty but valid facts so Stage 2 can at least try to proceed
+        return {
+            facts: ["Content was provided but precise fact extraction failed."],
+            statistics: [],
+            core_claims: ["AI reprocessing required"]
+        };
     }
 };
 

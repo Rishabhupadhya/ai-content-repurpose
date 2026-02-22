@@ -68,7 +68,9 @@ const ContentSchema = new mongoose.Schema({
       title: String,
       metaDescription: String,
       keywords: [String],
-      explanation: String
+      explanation: String,
+      score: Number,
+      feedback: [String]
     }
   },
 

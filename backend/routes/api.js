@@ -141,11 +141,21 @@ router.post('/generate', async (req, res) => {
                         ? slide.imagePrompt || ''
                         : '';
 
-                const imageUrl = await generateImage(imagePrompt);
-                const finalImage = await composeInstagramSlide(
-                    imageUrl,
-                    text
-                );
+                let imageUrl = null;
+                let finalImage = null;
+
+                try {
+                    imageUrl = await generateImage(imagePrompt);
+                    finalImage = await composeInstagramSlide(
+                        imageUrl,
+                        text
+                    );
+                } catch (imgErr) {
+                    console.error('⚠️ Slide generation failed:', imgErr.message);
+                    // Fallback: Use a generic high-quality gradient/abstract image from Unsplash
+                    imageUrl = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop';
+                    finalImage = imageUrl; // Fallback to raw image if composition fails
+                }
 
                 finalSlides.push({
                     text,
