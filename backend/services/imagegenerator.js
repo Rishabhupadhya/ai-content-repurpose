@@ -11,31 +11,40 @@ async function generateImage(prompt) {
     const replicate = new Replicate({ auth: token });
 
     try {
-        console.log(`🎨 Generating image. Token starts with: ${token.substring(0, 5)}...`);
+        console.log(`🎨 Generating image (FLUX). Token starts with: ${token.substring(0, 5)}...`);
 
-        // Add a small delay to respect free-tier burst limits (1 request at a time)
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Add a small delay to respect free-tier limits
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
         const output = await replicate.run(
-            "stability-ai/sdxl:39ed52f2a78e934b3ba6e246915696c0334a2539d0f93010b98663273e93a61f",
+            "black-forest-labs/flux-schnell",
             {
                 input: {
-                    prompt,
-                    width: 1024,
-                    height: 1024,
-                    num_outputs: 1,
-                    scheduler: "K_EULER",
+                    prompt: `Professional cinematic social media graphic: ${prompt}, high resolution, clean, modern aesthetic`,
+                    num_inference_steps: 4,
+                    aspect_ratio: "1:1",
                     guidance_scale: 7.5,
-                    apply_watermark: false
+                    format: "webp"
                 },
             }
         );
 
-        return Array.isArray(output) ? output[0] : output;
+        // FLUX usually returns an array of readable streams or URLs
+        const imageUrl = Array.isArray(output) ? output[0] : output;
+
+        // Ensure we handle stream objects if necessary (though replicate-js usually gives URLs for run)
+        return typeof imageUrl === 'string' ? imageUrl : String(imageUrl);
+
     } catch (error) {
         console.error("❌ Replicate Image Generation Failed:", error.message);
-        // Fallback to a nice abstract AI image on error
-        return `https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1024&q=80`;
+
+        // Detect rate limit and log it specifically
+        if (error.message.includes('429')) {
+            console.warn("⚠️ Rate limited by Replicate. Check billing or slow down.");
+        }
+
+        // Fallback to a high-quality abstract tech image
+        return `https://images.unsplash.com/photo-1614850523296-e81109931557?auto=format&fit=crop&w=1024&q=80`;
     }
 }
 

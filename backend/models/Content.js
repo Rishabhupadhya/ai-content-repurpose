@@ -7,10 +7,10 @@ const mongoose = require('mongoose');
  */
 const InstagramSlideSchema = new mongoose.Schema(
   {
-    text: { type: String, required: true },
-    imagePrompt: { type: String, required: true },
-    imageUrl: { type: String, required: true },
-    finalImage: { type: String, required: true } // base64 image
+    text: { type: String, default: "" },
+    imagePrompt: { type: String, default: "" },
+    imageUrl: { type: String, default: "" },
+    finalImage: { type: String, default: "" } // base64 image
   },
   { _id: false }
 );

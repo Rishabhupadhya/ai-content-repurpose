@@ -22,47 +22,86 @@ const getHash = (content) => crypto.createHash('sha256').update(content).digest(
  */
 const extractJSON = (text) => {
     if (!text) return null;
-    let inString = false, escaped = false, depth = 0, start = -1;
-    for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        if (escaped) { escaped = false; continue; }
-        if (char === '\\') { escaped = true; continue; }
-        if (char === '"') { inString = !inString; continue; }
-        if (inString) continue;
-        if (char === '{') { if (depth === 0) start = i; depth++; }
-        else if (char === '}') { if (depth > 0) { depth--; if (depth === 0 && start !== -1) return text.slice(start, i + 1); } }
+
+    // First, try to find a JSON block wrapped in triple backticks
+    const markdownMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/```\s*([\s\S]*?)\s*```/);
+    if (markdownMatch) {
+        return markdownMatch[1];
     }
-    return null;
+
+    // Otherwise, find the first '{' and last '}'
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+
+    if (start !== -1 && end !== -1 && end > start) {
+        return text.slice(start, end + 1);
+    }
+
+    return text;
 };
 
 const sanitizeJSONString = (json) => {
-    let result = '', inString = false, escaped = false;
-    for (let i = 0; i < json.length; i++) {
-        const char = json[i];
-        if (char === '"' && !escaped) { inString = !inString; result += char; continue; }
-        if (inString) {
-            if (escaped) {
-                if (!'btnfru"/\\'.includes(char)) result = result.slice(0, -1) + '\\\\' + char;
-                else result += char;
-                escaped = false;
-            } else if (char === '\\') { escaped = true; result += char; }
-            else if (char === '\n') result += '\\n';
-            else result += char;
-        } else result += char;
+    if (!json) return "";
+    // Remove potential control characters and fix common malformations
+    return json
+        .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // Remove control characters
+        .replace(/([{,]\s*)(\w+):/g, '$1"$2":') // Quote unquoted keys
+        .replace(/,\s*([\]}])/g, '$1'); // Remove trailing commas
+};
+
+const repairJSON = (json) => {
+    if (!json) return "";
+    let cleaned = json.trim();
+
+    // Count brackets and quotes
+    let openBraces = 0;
+    let openBrackets = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = 0; i < cleaned.length; i++) {
+        const char = cleaned[i];
+        if (escaped) { escaped = false; continue; }
+        if (char === '\\') { escaped = true; continue; }
+        if (char === '"') inString = !inString;
+        if (inString) continue;
+        if (char === '{') openBraces++;
+        if (char === '}') openBraces--;
+        if (char === '[') openBrackets++;
+        if (char === ']') openBrackets--;
     }
-    return result;
+
+    // Fix truncated strings
+    if (inString) cleaned += '"';
+
+    // Fix truncated arrays and objects
+    while (openBrackets > 0) { cleaned += ']'; openBrackets--; }
+    while (openBraces > 0) { cleaned += '}'; openBraces--; }
+
+    return cleaned;
 };
 
 const safeParseJSON = (raw) => {
     let cleaned = extractJSON(raw);
     if (!cleaned) throw new Error('No JSON object found');
-    cleaned = cleaned.replace(/,\s*([\]}])/g, '$1');
-    const sanitized = sanitizeJSONString(cleaned);
+
     try {
-        return JSON.parse(sanitized);
+        return JSON.parse(cleaned);
     } catch (e) {
-        console.error('Parse failed, snippet:', raw.substring(0, 100));
-        throw e;
+        // Try repairing the JSON (e.g. if truncated)
+        const repaired = repairJSON(cleaned);
+        try {
+            return JSON.parse(repaired);
+        } catch (inner) {
+            // Try sanitization + repair
+            const sanitized = sanitizeJSONString(repaired);
+            try {
+                return JSON.parse(sanitized);
+            } catch (finalError) {
+                console.error(`❌ Parse failed. Length: ${raw.length}. Snippet: ${raw.substring(0, 100)}...`);
+                throw new Error('JSON parsing failed even after repair and sanitization');
+            }
+        }
     }
 };
 
@@ -79,39 +118,46 @@ const normalizeText = (v) => Array.isArray(v) ? v.join('\n\n') : (typeof v === '
  * ======================================
  */
 const extractFacts = async (content) => {
-    const hash = getHash(content);
+    const truncatedContent = content.slice(0, 15000); // Truncate to ~3-4k tokens to avoid crashes
+    const hash = getHash(truncatedContent);
     if (FactCache.has(hash)) return FactCache.get(hash);
 
-    console.log("🏗️ Stage 1: Extracting deterministic facts...");
-    const prompt = `Extract every standalone fact, statistic, claim, and core message from the blog below.
-Do NOT summarize. Do NOT rephrase. Keep numbers with their context.
+    console.log("🏗️ Stage 1: Extracting deterministic facts (length:", truncatedContent.length, ")...");
+    const prompt = `Extract every standalone fact, statistic, claim, and core message from the content below.
+Return ONLY valid JSON. No conversational text.
 
-Return ONLY a JSON object:
 {
-  "facts": ["fact 1", "fact 2", ...],
-  "statistics": ["stat 1", ...],
-  "core_claims": ["claim 1", ...]
+  "facts": ["list of strings"],
+  "statistics": ["list of strings"],
+  "core_claims": ["list of strings"]
 }`;
 
     const response = await axios.post(AI_MODEL_ENDPOINT, {
         model: AI_MODEL_NAME,
         messages: [
-            { role: 'system', content: 'You are a precision data extraction engine. Output ONLY valid JSON.' },
-            { role: 'user', content: `${prompt}\n\nCONTENT:\n${content}` }
+            { role: 'system', content: 'You are a precision data extraction engine. You MUST respond with ONLY valid JSON and nothing else.' },
+            { role: 'user', content: `${prompt}\n\nCONTENT:\n${truncatedContent}` }
         ],
-        temperature: 0,
+        temperature: 0.1,
         response_format: { type: 'json_object' },
         options: {
-            num_ctx: 16384, // High context for facts
-            num_predict: 2048,
-            top_p: 0.1
+            num_ctx: 16384,
+            num_predict: 2048
         }
     });
 
     const raw = response.data?.choices?.[0]?.message?.content || response.data?.message?.content;
     const parsed = safeParseJSON(raw);
-    FactCache.set(hash, parsed);
-    return parsed;
+
+    // 🧠 PRUNING: Limit to top 25 of each category to prevent context bloating in Stage 2
+    const pruned = {
+        facts: (parsed.facts || []).slice(0, 25),
+        statistics: (parsed.statistics || []).slice(0, 25),
+        core_claims: (parsed.core_claims || []).slice(0, 25)
+    };
+
+    FactCache.set(hash, pruned);
+    return pruned;
 };
 
 /**
@@ -132,8 +178,8 @@ const callSynthesizer = async (facts, platformPrompt) => {
             top_p: 0.9,
             response_format: { type: 'json_object' },
             options: {
-                num_ctx: 8192,
-                num_predict: 2048
+                num_ctx: 10240, // Increase context for long outputs
+                num_predict: 4096 // Double the limit to avoid truncation
             }
         });
 

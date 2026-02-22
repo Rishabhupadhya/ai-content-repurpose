@@ -131,6 +131,13 @@ export default function Home() {
 
         setGeneratingPlatform(platform);
         setStatus((s) => ({ ...s, [platform]: "loading" }));
+        setActiveTab(platform); // Auto-switch to the tab being generated
+
+        // Scroll to results section so user sees the generation happening
+        const resultsEl = document.getElementById('results-section');
+        if (resultsEl) {
+            resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
 
         try {
             const genRes = await generatePlatformContent(contentId, platform);
@@ -301,7 +308,7 @@ export default function Home() {
 
                         {/* RESULTS */}
                         {results && (
-                            <div className="space-y-12 pt-12 border-t border-border">
+                            <div id="results-section" className="space-y-12 pt-12 border-t border-border scroll-mt-24">
                                 <PlatformTabs
                                     activeTab={activeTab}
                                     setActiveTab={setActiveTab}

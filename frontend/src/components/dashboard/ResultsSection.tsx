@@ -48,12 +48,13 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
 
     if (!results) return null;
 
-    const originalOutput = results.outputs?.[activeTab];
-    const schedule = results.scheduling?.[activeTab];
+    const originalOutput = results?.outputs?.[activeTab];
+    const schedule = results?.scheduling?.[activeTab];
     const currentEdit = editedContent[activeTab];
 
-    // If this platform hasn't been generated yet, show a message
-    if (!originalOutput) {
+    // If we have editedContent for this tab, we can show the results immediately
+    // or if we have originalOutput.
+    if (!currentEdit && !originalOutput) {
         return (
             <div className="flex flex-col items-center justify-center py-32 space-y-4">
                 <div className="text-h3 text-ink-lighter">No content generated yet</div>
@@ -80,7 +81,7 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: i * 0.1 }}
-                                className="group relative bg-muted/30 p-4 rounded-3xl border border-white/10 hover:border-indigo-500 transition-all flex flex-col gap-3"
+                                className="group relative z-10 bg-muted/30 p-4 rounded-3xl border border-white/10 hover:border-indigo-500 transition-all flex flex-col gap-3"
                             >
                                 <span className="absolute top-3 right-4 text-xs font-black text-muted-foreground/30">
                                     SLIDE {i + 1}
@@ -88,7 +89,7 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
 
                                 {/* Image preview (if available) */}
                                 {imageUrl && (
-                                    <div className="aspect-[4/5] w-full rounded-2xl overflow-hidden bg-gradient-to-br from-[hsl(var(--accent))/0.15] to-emerald-400/15 border border-white/10">
+                                    <div className="aspect-[4/5] w-full rounded-2xl overflow-hidden bg-gradient-to-br from-[hsl(var(--accent))/0.15] to-emerald-400/15 border border-white/10 pointer-events-none">
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img
                                             src={imageUrl}
@@ -100,10 +101,10 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
 
                                 {/* Text editor */}
                                 <textarea
-                                    className="w-full bg-transparent border-none focus:ring-0 text-sm font-medium resize-none min-h-[120px] leading-relaxed"
-                                    value={text}
+                                    className="w-full bg-transparent border-none focus:ring-0 text-sm font-medium resize-none min-h-[120px] leading-relaxed relative z-20 cursor-text"
+                                    value={text || ''}
                                     onChange={(e) => {
-                                        const updated = slides.map((s: any, idx: number) => {
+                                        const updated = Array.isArray(slides) ? slides.map((s: any, idx: number) => {
                                             if (idx !== i) return s;
                                             if (typeof s === 'string') {
                                                 return e.target.value;
@@ -112,11 +113,11 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
                                                 ...s,
                                                 text: e.target.value,
                                             };
-                                        });
+                                        }) : [];
                                         onUpdateContent('instagram', updated);
                                     }}
                                 />
-                                <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-1">
+                                <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-1 pointer-events-none">
                                     <span>Tap to edit copy</span>
                                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <Edit3 className="w-3 h-3 text-[hsl(var(--accent))]" />
@@ -147,14 +148,14 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
                                 </div>
                                 {i !== currentEdit.length - 1 && <div className="w-0.5 flex-1 bg-zinc-300 my-2" />}
                             </div>
-                            <div className="flex-1 bg-white p-6 rounded-2xl border-2 border-zinc-300 shadow-xl" style={{ backgroundColor: 'white' }}>
+                            <div className="flex-1 bg-white p-6 rounded-2xl border-2 border-zinc-300 shadow-xl relative z-20" style={{ backgroundColor: 'white' }}>
                                 <textarea
-                                    className="w-full bg-transparent border-none focus:ring-0 text-base resize-none p-0 leading-relaxed font-bold"
-                                    style={{ color: 'black', opacity: 1, WebkitTextFillColor: 'black' }}
+                                    className="w-full bg-transparent border-none focus:ring-0 text-base resize-none p-0 leading-relaxed font-bold cursor-text"
+                                    style={{ color: 'black', opacity: 1 }}
                                     rows={3}
-                                    value={tweet}
+                                    value={tweet || ''}
                                     onChange={(e) => {
-                                        const newThread = [...currentEdit];
+                                        const newThread = Array.isArray(currentEdit) ? [...currentEdit] : [];
                                         newThread[i] = e.target.value;
                                         onUpdateContent('twitter', newThread);
                                     }}
@@ -216,14 +217,14 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
         }
 
         return (
-            <div className="relative group">
+            <div className="relative group z-10">
                 <textarea
-                    className="w-full h-[500px] bg-white border-2 border-zinc-200 group-hover:border-indigo-300 focus:border-indigo-500 transition-all rounded-3xl focus:ring-4 focus:ring-indigo-500/5 text-lg leading-relaxed font-serif p-8 resize-none shadow-sm"
+                    className="w-full h-[500px] bg-white border-2 border-zinc-200 group-hover:border-indigo-300 focus:border-indigo-500 transition-all rounded-3xl focus:ring-4 focus:ring-indigo-500/5 text-lg leading-relaxed font-serif p-8 resize-none shadow-sm relative z-20 cursor-text"
                     style={{ color: 'black', backgroundColor: 'white' }}
-                    value={currentEdit}
+                    value={typeof currentEdit === 'string' ? currentEdit : ''}
                     onChange={(e) => onUpdateContent(activeTab, e.target.value)}
                 />
-                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 text-indigo-400">
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 text-indigo-400 pointer-events-none z-30">
                     <Edit3 className="w-4 h-4" />
                     <span className="text-[10px] font-black uppercase tracking-widest">Editing content</span>
                 </div>
@@ -297,13 +298,13 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
                                     <BarChart3 className="w-4 h-4" /> Engagement
                                 </h4>
                                 <div className="flex items-end gap-2 mb-2">
-                                    <span className="text-5xl font-black">{originalOutput.score || 0}</span>
+                                    <span className="text-5xl font-black">{originalOutput?.score || 0}</span>
                                     <span className="text-sm font-bold text-muted-foreground pb-2">/ 100</span>
                                 </div>
                                 <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                                     <motion.div
                                         initial={{ width: 0 }}
-                                        animate={{ width: `${originalOutput.score || 0}%` }}
+                                        animate={{ width: `${originalOutput?.score || 0}%` }}
                                         transition={{ duration: 1, ease: "circOut" }}
                                         className="h-full bg-gradient-to-r from-[hsl(var(--accent))] via-cyan-400 to-emerald-400"
                                     />
@@ -317,7 +318,7 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
                                     <Calendar className="w-4 h-4" /> Schedule
                                 </h4>
                                 <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">
-                                    {schedule}
+                                    {schedule || 'Calculating...'}
                                 </p>
                             </CardContent>
                         </Card>
@@ -328,12 +329,17 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
                                     <Sparkles className="w-4 h-4" /> Feedback
                                 </h4>
                                 <ul className="space-y-3">
-                                    {(originalOutput.feedback || []).map((f: string, i: number) => (
+                                    {(originalOutput?.feedback || []).map((f: string, i: number) => (
                                         <li key={i} className="text-xs font-medium text-muted-foreground flex gap-2">
                                             <span className="text-orange-500 shrink-0">•</span>
                                             {f}
                                         </li>
                                     ))}
+                                    {(!originalOutput?.feedback || originalOutput.feedback.length === 0) && (
+                                        <li className="text-xs font-medium text-muted-foreground italic">
+                                            Strategy feedback incoming...
+                                        </li>
+                                    )}
                                 </ul>
                             </CardContent>
                         </Card>
