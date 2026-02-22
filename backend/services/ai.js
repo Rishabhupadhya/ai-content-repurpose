@@ -3,8 +3,8 @@ const dotenv = require('dotenv');
 const crypto = require('crypto');
 dotenv.config();
 
-const AI_MODEL_ENDPOINT = process.env.AI_MODEL_ENDPOINT || 'https://api.groq.com/openai/v1/chat/completions';
-const AI_MODEL_NAME = process.env.AI_MODEL_NAME || 'llama-3.3-70b-versatile';
+const AI_MODEL_ENDPOINT = process.env.AI_MODEL_ENDPOINT || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+const AI_MODEL_NAME = process.env.AI_MODEL_NAME || 'gemini-2.5-flash';
 const AI_API_KEY = process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY || '';
 
 /**
