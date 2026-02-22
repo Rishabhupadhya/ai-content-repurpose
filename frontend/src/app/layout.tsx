@@ -13,6 +13,12 @@ const inter = Inter({
 export const metadata: Metadata = {
     title: "Repurpose — AI Content Adaptation Platform",
     description: "Transform content for every platform. AI handles the adaptation. You stay in control.",
+    icons: {
+        icon: [
+            { url: '/favicon.png', type: 'image/png' },
+        ],
+        apple: '/favicon.png',
+    },
 };
 
 export default function RootLayout({
