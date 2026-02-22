@@ -3,9 +3,9 @@ const dotenv = require('dotenv');
 const crypto = require('crypto');
 dotenv.config();
 
-const AI_MODEL_ENDPOINT = process.env.AI_MODEL_ENDPOINT || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-const AI_MODEL_NAME = process.env.AI_MODEL_NAME || 'gemini-2.5-flash';
-const AI_API_KEY = process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY || '';
+const AI_MODEL_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+const AI_MODEL_NAME = 'gemini-2.5-flash';
+const AI_API_KEY = process.env.GEMINI_API_KEY || '';
 
 /**
  * ======================================
@@ -219,6 +219,9 @@ const callSynthesizer = async (facts, platformPrompt) => {
         return safeParseJSON(raw);
     } catch (err) {
         console.error('❌ Stage 2 Failure:', err.message);
+        if (err.response) {
+            console.error('❌ Stage 2 Response Data:', JSON.stringify(err.response.data, null, 2));
+        }
 
         // Final fallback if parsing fails - return a safe object
         return {
