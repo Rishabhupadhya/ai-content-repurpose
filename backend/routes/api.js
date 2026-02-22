@@ -91,6 +91,7 @@ router.post('/ingest', async (req, res) => {
 router.post('/generate', async (req, res) => {
     try {
         const { id, platform } = req.body;
+        console.log(`🚀 Generation started for ID: ${id}, Platform: ${platform}`);
 
         if (!id || !platform) {
             return res.status(400).json({ error: 'Missing id or platform' });
@@ -225,9 +226,32 @@ router.post('/generate', async (req, res) => {
         });
 
     } catch (err) {
-        console.error('❌ Generation error:', err);
-        res.status(500).json({ error: 'Failed to generate content' });
+        console.error('❌ Generation error details:', {
+            message: err.message,
+            stack: err.stack,
+            response: err.response?.data
+        });
+        res.status(500).json({
+            error: 'Failed to generate content',
+            details: err.message
+        });
     }
+});
+
+/**
+ * ======================================
+ * 🛠️ DEBUG ENDPOINT (Safe)
+ * ======================================
+ */
+router.get('/debug-config', (req, res) => {
+    res.json({
+        model: ai.AI_MODEL_NAME,
+        endpoint: ai.AI_MODEL_ENDPOINT,
+        hasApiKey: !!process.env.GROQ_API_KEY || !!process.env.OPENAI_API_KEY,
+        hasReplicateToken: !!process.env.REPLICATE_API_TOKEN,
+        hasMongoUri: !!process.env.MONGO_URI,
+        nodeEnv: process.env.NODE_ENV
+    });
 });
 
 /**

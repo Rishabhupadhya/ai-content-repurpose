@@ -5,7 +5,7 @@ dotenv.config();
 
 const AI_MODEL_ENDPOINT = process.env.AI_MODEL_ENDPOINT || 'https://api.groq.com/openai/v1/chat/completions';
 const AI_MODEL_NAME = process.env.AI_MODEL_NAME || 'llama-3.3-70b-versatile';
-const AI_API_KEY = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY || '';
+const AI_API_KEY = process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY || '';
 
 /**
  * ======================================
@@ -119,7 +119,9 @@ const normalizeText = (v) => Array.isArray(v) ? v.join('\n\n') : (typeof v === '
  * ======================================
  */
 const extractFacts = async (content) => {
-    const truncatedContent = content.slice(0, 15000); // Truncate to ~3-4k tokens to avoid crashes
+    // Gemini can handle 1M+ tokens, so we only truncate for Groq/Llama or if explicitly requested
+    const isGemini = AI_MODEL_NAME.toLowerCase().includes('gemini');
+    const truncatedContent = isGemini ? content.slice(0, 100000) : content.slice(0, 15000);
     const hash = getHash(truncatedContent);
     if (FactCache.has(hash)) return FactCache.get(hash);
 
@@ -340,5 +342,7 @@ module.exports = {
     generateInstagram,
     generateTwitter,
     generateNewsletter,
-    generateSEO
+    generateSEO,
+    AI_MODEL_NAME,
+    AI_MODEL_ENDPOINT
 };
