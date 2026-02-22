@@ -24,27 +24,24 @@ Due to the long-running nature of AI generation (often exceeding 60 seconds), a 
 5. Click **Connect** -> **Drivers** -> Copy the connection string.
    - Example: `mongodb+srv://<user>:<password>@cluster.mongodb.net/ai-repurpose?retryWrites=true&w=majority`
 
-## Step 2: Backend Deployment (Railway Recommendation)
-1. Go to [Railway.app](https://railway.app/).
-2. Create a new project -> **Deploy from GitHub repo**.
-3. Select your repository.
-4. **Root Directory**: Set to `backend`.
-5. **Environment Variables**:
-   - `PORT`: `5001` (or whatever Railway assigns)
-   - `MONGO_URI`: Your MongoDB Atlas string.
-   - `REPLICATE_API_TOKEN`: Your Replicate token.
-   - `AI_MODEL_ENDPOINT`: 
-     - If using Groq: `https://api.groq.com/openai/v1/chat/completions`
-     - If using Together: `https://api.together.xyz/v1/chat/completions`
-   - `AI_MODEL_NAME`: e.g., `llama-3.1-70b-versatile` or `mistral-7b-instruct`.
-6. Deploy. Copy the provided URL (e.g., `https://backend-production.up.railway.app`).
+## Step 2: Backend Deployment (Render Success)
+Your backend is live at: `https://ai-content-repurpose.onrender.com`
+
+**Action Required on Render Dashboard:**
+1. Go to your Render service settings -> **Environment Variables**.
+2. Add the following keys (don't keep them in code/env files):
+   - `MONGO_URI`: (Your MongoDB Atlas connection string)
+   - `REPLICATE_API_TOKEN`: (Your Replicate token)
+   - `GROQ_API_KEY`: (Your Groq API key)
+   - `AI_MODEL_NAME`: `llama-3.1-70b-versatile`
+   - `AI_MODEL_ENDPOINT`: `https://api.groq.com/openai/v1/chat/completions`
 
 ## Step 3: Frontend Deployment (Vercel)
 1. Go to [Vercel](https://vercel.com).
 2. Create a new project -> **Import GitHub repo**.
 3. **Root Directory**: Set to `frontend`.
 4. **Environment Variables**:
-   - `NEXT_PUBLIC_API_URL`: Your backend URL + `/api` (e.g., `https://backend-production.up.railway.app/api`).
+   - `NEXT_PUBLIC_API_URL`: `https://ai-content-repurpose.onrender.com/api`
 5. Click **Deploy**.
 
 ---
