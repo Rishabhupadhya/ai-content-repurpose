@@ -166,14 +166,25 @@ router.post('/generate', async (req, res) => {
              * ======================================
              * 🟠 SEO SPECIAL HANDLING
              * ======================================
-             * Keep title/metaDescription/keywords structure for the editor
              */
             entry.outputs.seo = {
-                title: normalizeContent(raw.title),
-                metaDescription: normalizeContent(raw.metaDescription),
-                keywords: Array.isArray(raw.keywords)
-                    ? raw.keywords.map(String)
+                title: normalizeContent(raw.title || raw.Title || ''),
+                metaDescription: normalizeContent(raw.metaDescription || raw.MetaDescription || ''),
+                keywords: Array.isArray(raw.keywords || raw.Keywords)
+                    ? (raw.keywords || raw.Keywords).map(String)
                     : [],
+                explanation: normalizeContent(raw.explanation || raw.Explanation || ''),
+                score: normalizeScore(raw.score ?? raw.Score),
+                feedback: normalizeFeedback(raw.feedback || raw.Feedback)
+            };
+        } else if (platform === 'twitter') {
+            /**
+             * ======================================
+             * 🐦 TWITTER SPECIAL HANDLING
+             * ======================================
+             */
+            entry.outputs.twitter = {
+                thread: Array.isArray(raw.thread) ? raw.thread : [],
                 explanation: normalizeContent(raw.explanation),
                 score: normalizeScore(raw.score),
                 feedback: normalizeFeedback(raw.feedback)
@@ -181,14 +192,14 @@ router.post('/generate', async (req, res) => {
         } else {
             /**
              * ======================================
-             * 🔵 ALL OTHER PLATFORMS
+             * 🔵 ALL OTHER PLATFORMS (Newsletter, LinkedIn)
              * ======================================
              */
             entry.outputs[platform] = {
-                content: normalizeContent(raw.content),
-                explanation: normalizeContent(raw.explanation),
-                score: normalizeScore(raw.score),
-                feedback: normalizeFeedback(raw.feedback)
+                content: normalizeContent(raw.content || raw.Content || ''),
+                explanation: normalizeContent(raw.explanation || raw.Explanation || ''),
+                score: normalizeScore(raw.score ?? raw.Score),
+                feedback: normalizeFeedback(raw.feedback || raw.Feedback)
             };
         }
 

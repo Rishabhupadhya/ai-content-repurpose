@@ -34,7 +34,7 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
 
     if (!results && loading) {
         return (
-                <div className="flex flex-col items-center justify-center py-32 space-y-6">
+            <div className="flex flex-col items-center justify-center py-32 space-y-6">
                 <div className="relative w-24 h-24">
                     <div className="absolute inset-0 bg-[hsl(var(--accent))/0.2] rounded-full animate-ping" />
                     <div className="relative bg-background rounded-full p-4 border-4 border-[hsl(var(--accent))] border-t-transparent animate-spin w-full h-full" />
@@ -142,14 +142,15 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
                             className="flex gap-4 relative"
                         >
                             <div className="flex flex-col items-center">
-                                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground border border-border">
+                                <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-black text-white border border-zinc-900 shadow-md">
                                     {i + 1}
                                 </div>
-                                {i !== currentEdit.length - 1 && <div className="w-0.5 flex-1 bg-border my-2" />}
+                                {i !== currentEdit.length - 1 && <div className="w-0.5 flex-1 bg-zinc-300 my-2" />}
                             </div>
-                            <div className="flex-1 bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-border shadow-sm">
+                            <div className="flex-1 bg-white p-6 rounded-2xl border-2 border-zinc-300 shadow-xl" style={{ backgroundColor: 'white' }}>
                                 <textarea
-                                    className="w-full bg-transparent border-none focus:ring-0 text-base resize-none p-0 leading-relaxed"
+                                    className="w-full bg-transparent border-none focus:ring-0 text-base resize-none p-0 leading-relaxed font-bold"
+                                    style={{ color: 'black', opacity: 1, WebkitTextFillColor: 'black' }}
                                     rows={3}
                                     value={tweet}
                                     onChange={(e) => {
@@ -169,30 +170,41 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
             return (
                 <div className="max-w-2xl mx-auto space-y-8">
                     <div className="space-y-2">
-                        <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Meta Title</label>
+                        <label className="text-xs font-black uppercase tracking-widest text-zinc-500">Meta Title</label>
                         <input
-                            className="w-full h-14 px-4 bg-muted/30 border border-border rounded-xl font-bold"
+                            className="w-full h-14 px-4 bg-white border-2 border-zinc-200 focus:border-indigo-500 transition-colors rounded-xl font-bold shadow-sm"
+                            style={{ color: 'black', backgroundColor: 'white' }}
                             value={currentEdit.title || ''}
                             onChange={(e) => onUpdateContent('seo', { ...currentEdit, title: e.target.value })}
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Meta Description</label>
+                        <label className="text-xs font-black uppercase tracking-widest text-zinc-500">Meta Description</label>
                         <textarea
-                            className="w-full bg-muted/30 border border-border rounded-xl p-4 text-base leading-relaxed h-32 resize-none"
+                            className="w-full bg-white border-2 border-zinc-200 focus:border-indigo-500 transition-colors rounded-xl p-4 text-base leading-relaxed h-32 resize-none font-bold shadow-sm"
+                            style={{ color: 'black', backgroundColor: 'white' }}
                             value={currentEdit.metaDescription || ''}
                             onChange={(e) => onUpdateContent('seo', { ...currentEdit, metaDescription: e.target.value })}
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Keywords</label>
-                        <div className="flex flex-wrap gap-2">
+                        <label className="text-xs font-black uppercase tracking-widest text-zinc-500">Keywords (Comma separated)</label>
+                        <input
+                            className="w-full h-12 px-4 bg-white border-2 border-zinc-200 focus:border-indigo-500 transition-colors rounded-xl font-bold shadow-sm"
+                            style={{ color: 'black', backgroundColor: 'white' }}
+                            value={Array.isArray(currentEdit.keywords) ? currentEdit.keywords.join(', ') : ''}
+                            onChange={(e) => {
+                                const kws = e.target.value.split(',').map(s => s.trim());
+                                onUpdateContent('seo', { ...currentEdit, keywords: kws });
+                            }}
+                        />
+                        <div className="flex flex-wrap gap-2 mt-2">
                             {(currentEdit.keywords || []).map((kw: string, i: number) => (
                                 <motion.span
                                     key={i}
                                     initial={{ scale: 0 }}
                                     animate={{ scale: 1 }}
-                                    className="px-3 py-1.5 bg-indigo-500/10 text-indigo-500 text-xs font-bold rounded-full border border-indigo-500/20"
+                                    className="px-3 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase tracking-widest rounded-full border border-indigo-100"
                                 >
                                     {kw}
                                 </motion.span>
@@ -200,15 +212,22 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
                         </div>
                     </div>
                 </div>
-            )
+            );
         }
 
         return (
-            <textarea
-                className="w-full h-[500px] bg-transparent border-none focus:ring-0 text-lg leading-relaxed font-serif p-4 resize-none"
-                value={currentEdit}
-                onChange={(e) => onUpdateContent(activeTab, e.target.value)}
-            />
+            <div className="relative group">
+                <textarea
+                    className="w-full h-[500px] bg-white border-2 border-zinc-200 group-hover:border-indigo-300 focus:border-indigo-500 transition-all rounded-3xl focus:ring-4 focus:ring-indigo-500/5 text-lg leading-relaxed font-serif p-8 resize-none shadow-sm"
+                    style={{ color: 'black', backgroundColor: 'white' }}
+                    value={currentEdit}
+                    onChange={(e) => onUpdateContent(activeTab, e.target.value)}
+                />
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 text-indigo-400">
+                    <Edit3 className="w-4 h-4" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Editing content</span>
+                </div>
+            </div>
         );
     };
 

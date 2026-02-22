@@ -1,12 +1,12 @@
+const dotenv = require('dotenv');
+dotenv.config();
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const dotenv = require('dotenv');
 const apiRoutes = require('./routes/api');
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5001;

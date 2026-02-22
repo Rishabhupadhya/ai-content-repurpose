@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Link2, FileText, Sparkles, Users, TrendingUp, Briefcase } from "lucide-react";
+import { Link2, FileText, Sparkles, Users, TrendingUp, Briefcase, Eye } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface InputSectionProps {
@@ -12,6 +12,7 @@ interface InputSectionProps {
     audience: string;
     setAudience: (audience: string) => void;
     onIngest: () => void;
+    onViewExamples: () => void;
     loading: boolean;
 }
 
@@ -29,6 +30,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
     audience,
     setAudience,
     onIngest,
+    onViewExamples,
     loading,
 }) => {
     const [inputMode, setInputMode] = useState<'url' | 'text'>('url');
@@ -167,22 +169,22 @@ export const InputSection: React.FC<InputSectionProps> = ({
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
                                         className={`relative h-24 rounded-xl border-2 transition-all overflow-hidden ${isSelected
-                                                ? 'border-accent bg-accent/5 shadow-lg shadow-accent/10'
-                                                : 'border-[hsl(var(--border))] hover:border-[hsl(var(--border-strong))] bg-surface'
+                                            ? 'border-accent bg-accent/5 shadow-lg shadow-accent/10'
+                                            : 'border-[hsl(var(--border))] hover:border-[hsl(var(--border-strong))] bg-surface'
                                             }`}
                                     >
                                         {isSelected && (
                                             <motion.div
                                                 layoutId="audienceIndicator"
-                                                className={`absolute inset-0 bg-gradient-to-br ${option.color} opacity-5`}
+                                                className={`absolute inset-0 bg-gradient-to-br ${option.color} opacity-10`}
                                                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                                             />
                                         )}
 
-                                        <div className="relative h-full flex flex-col items-center justify-center gap-2">
+                                        <div className="relative z-10 h-full flex flex-col items-center justify-center gap-2">
                                             <Icon className={`w-5 h-5 ${isSelected ? 'text-accent' : 'text-ink-lighter'
                                                 }`} />
-                                            <span className={`text-sm font-medium ${isSelected ? 'text-accent' : 'text-ink'
+                                            <span className={`text-sm font-medium ${isSelected ? 'text-ink' : 'text-ink-lighter'
                                                 }`}>
                                                 {option.value}
                                             </span>
@@ -194,49 +196,49 @@ export const InputSection: React.FC<InputSectionProps> = ({
                     </div>
 
                     {/* Premium CTA */}
-                    <div className="pt-4">
-                        <motion.button
-                            onClick={onIngest}
-                            disabled={loading || (!url && !text)}
-                            whileHover={{ scale: loading ? 1 : 1.01 }}
-                            whileTap={{ scale: loading ? 1 : 0.99 }}
-                            className="group relative w-full h-16 bg-accent hover:bg-accent-hover disabled:bg-ink-lighter disabled:cursor-not-allowed text-white rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-xl hover:shadow-accent/20 disabled:shadow-none overflow-hidden"
-                        >
-                            {loading ? (
-                                <span className="flex items-center justify-center gap-3">
-                                    <motion.div
-                                        animate={{ rotate: 360 }}
-                                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                        className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
-                                    />
-                                    Processing your content...
-                                </span>
-                            ) : (
-                                <>
-                                    <span className="relative z-10 flex items-center justify-center gap-2">
-                                        <Sparkles className="w-5 h-5" />
-                                        Generate platform content
-                                        <motion.svg
-                                            className="w-5 h-5"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                            animate={{ x: [0, 4, 0] }}
-                                            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                                        >
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                        </motion.svg>
+                    <div className="pt-4 space-y-4">
+                        <div className="flex gap-4">
+                            <motion.button
+                                onClick={onIngest}
+                                disabled={loading || (!url && !text)}
+                                whileHover={{ scale: loading ? 1 : 1.01 }}
+                                whileTap={{ scale: loading ? 1 : 0.99 }}
+                                className="group relative flex-[2] h-16 bg-accent hover:bg-accent-hover disabled:bg-ink-lighter disabled:cursor-not-allowed text-white rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-xl hover:shadow-accent/20 disabled:shadow-none overflow-hidden"
+                            >
+                                {loading ? (
+                                    <span className="flex items-center justify-center gap-3">
+                                        <motion.div
+                                            animate={{ rotate: 360 }}
+                                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                            className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                                        />
+                                        Processing...
                                     </span>
+                                ) : (
+                                    <>
+                                        <span className="relative z-10 flex items-center justify-center gap-2">
+                                            <Sparkles className="w-5 h-5 font-bold" />
+                                            Generate
+                                        </span>
+                                        <motion.div
+                                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                                            animate={{ x: ['-100%', '100%'] }}
+                                            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                        />
+                                    </>
+                                )}
+                            </motion.button>
 
-                                    {/* Shimmer effect */}
-                                    <motion.div
-                                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                                        animate={{ x: ['-100%', '100%'] }}
-                                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                                    />
-                                </>
-                            )}
-                        </motion.button>
+                            <motion.button
+                                onClick={onViewExamples}
+                                whileHover={{ scale: 1.01 }}
+                                whileTap={{ scale: 0.99 }}
+                                className="flex-1 h-16 bg-white shrink-0 border-2 border-[hsl(var(--border))] hover:border-accent hover:bg-accent/5 text-ink-light hover:text-accent rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 group"
+                            >
+                                <Eye className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                View Examples
+                            </motion.button>
+                        </div>
 
                         <p className="text-caption text-ink-lighter text-center mt-4">
                             AI will create optimized versions for LinkedIn, Twitter, Instagram, and newsletters

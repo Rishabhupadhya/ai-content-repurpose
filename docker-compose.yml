@@ -17,7 +17,7 @@ services:
     environment:
       - MONGO_URI=mongodb://mongodb:27017/ai-repurpose
       - AI_MODEL_ENDPOINT=http://host.docker.internal:11434/v1/chat/completions
-      - AI_MODEL_NAME=llama3
+      - AI_MODEL_NAME=gemma2:2b
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:

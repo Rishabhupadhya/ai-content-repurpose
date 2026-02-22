@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles, Zap, Globe } from 'lucide-react';
 
-export const Hero = ({ onStart }: { onStart: () => void }) => {
+export const Hero = ({ onStart, onViewExamples }: { onStart: () => void, onViewExamples: () => void }) => {
     return (
         <div className="relative min-h-screen flex items-center justify-center px-6 overflow-hidden bg-gradient-to-b from-paper via-paper to-[hsl(var(--accent)/0.02)]">
             {/* Sophisticated grid background */}
@@ -82,7 +82,10 @@ export const Hero = ({ onStart }: { onStart: () => void }) => {
                             <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                         </Button>
 
-                        <button className="h-14 px-6 text-ink hover:text-accent border border-[hsl(var(--border))] hover:border-accent/30 rounded-xl font-medium transition-all duration-200 hover:bg-accent/5 flex items-center gap-2">
+                        <button
+                            onClick={onViewExamples}
+                            className="h-14 px-6 text-ink hover:text-accent border border-[hsl(var(--border))] hover:border-accent/30 rounded-xl font-medium transition-all duration-200 hover:bg-accent/5 flex items-center gap-2"
+                        >
                             <Globe className="w-4 h-4" />
                             View examples
                         </button>
