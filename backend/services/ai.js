@@ -1,11 +1,20 @@
+const path = require('path');
 const axios = require('axios');
 const dotenv = require('dotenv');
 const crypto = require('crypto');
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const AI_MODEL_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-const AI_MODEL_NAME = 'gemini-2.5-flash';
+const AI_MODEL_ENDPOINT = process.env.AI_MODEL_ENDPOINT || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+const AI_MODEL_NAME = process.env.AI_MODEL_NAME || 'gemini-2.5-flash';
 const AI_API_KEY = process.env.GEMINI_API_KEY || '';
+
+// Gemini requires API key as ?key= param (more reliable than Bearer for this endpoint)
+const getRequestUrl = () => {
+    const base = AI_MODEL_ENDPOINT;
+    if (!AI_API_KEY) return base;
+    const sep = base.includes('?') ? '&' : '?';
+    return `${base}${sep}key=${encodeURIComponent(AI_API_KEY)}`;
+};
 
 /**
  * ======================================
@@ -184,7 +193,12 @@ Return ONLY valid JSON. No conversational text.
   "core_claims": ["list of strings"]
 }`;
 
-    const headers = AI_API_KEY ? { 'Authorization': `Bearer ${AI_API_KEY}`, 'Content-Type': 'application/json' } : {};
+    if (!AI_API_KEY) {
+        console.error('❌ GEMINI_API_KEY is missing. Set it in backend/.env');
+        throw new Error('GEMINI_API_KEY is not configured');
+    }
+
+    const headers = { 'Content-Type': 'application/json' };
 
     const body = {
         model: AI_MODEL_NAME,
@@ -193,18 +207,12 @@ Return ONLY valid JSON. No conversational text.
             { role: 'user', content: `${prompt}\n\nCONTENT:\n${truncatedContent}` }
         ],
         temperature: 0.05,
-        response_format: { type: 'json_object' }
+        response_format: { type: 'json_object' },
+        max_tokens: 2048
     };
 
-    // Use Ollama options ONLY if no API key is present
-    if (!AI_API_KEY) {
-        body.options = { num_ctx: 16384, num_predict: 2048 };
-    } else {
-        body.max_tokens = 2048;
-    }
-
     try {
-        const response = await axios.post(AI_MODEL_ENDPOINT, body, { headers, timeout: 60000 });
+        const response = await axios.post(getRequestUrl(), body, { headers, timeout: 60000 });
         const raw = response.data?.choices?.[0]?.message?.content || response.data?.message?.content;
 
         if (!raw) throw new Error('Empty response from Stage 1');
@@ -220,7 +228,9 @@ Return ONLY valid JSON. No conversational text.
         FactCache.set(hash, pruned);
         return pruned;
     } catch (err) {
-        console.error('❌ Stage 1 Fact Extraction Failure:', err.response?.data || err.message);
+        const details = err.response?.data ? JSON.stringify(err.response.data) : err.message;
+        console.error('❌ Stage 1 Fact Extraction Failure:', details);
+        if (err.response?.status) console.error('   HTTP status:', err.response.status);
         // Fallback: Return empty but valid facts so Stage 2 can at least try to proceed
         return {
             facts: ["Content was provided but precise fact extraction failed."],
@@ -247,8 +257,13 @@ const FALLBACK_OUTPUT = {
 const callSynthesizer = async (facts, platformPrompt, retryCount = 0) => {
     const maxRetries = 1;
     try {
+        if (!AI_API_KEY) {
+            console.error('❌ GEMINI_API_KEY is missing. Set it in backend/.env');
+            return FALLBACK_OUTPUT;
+        }
+
         console.log(`🎨 Stage 2: Generating stylistic variation${retryCount ? ` (retry ${retryCount})` : ''}...`);
-        const headers = AI_API_KEY ? { 'Authorization': `Bearer ${AI_API_KEY}`, 'Content-Type': 'application/json' } : {};
+        const headers = { 'Content-Type': 'application/json' };
 
         const body = {
             model: AI_MODEL_NAME,
@@ -258,16 +273,11 @@ const callSynthesizer = async (facts, platformPrompt, retryCount = 0) => {
             ],
             temperature: 0.6,
             top_p: 0.9,
-            response_format: { type: 'json_object' }
+            response_format: { type: 'json_object' },
+            max_tokens: 4096
         };
 
-        if (!AI_API_KEY) {
-            body.options = { num_ctx: 10240, num_predict: 4096 };
-        } else {
-            body.max_tokens = 4096;
-        }
-
-        const response = await axios.post(AI_MODEL_ENDPOINT, body, { headers, timeout: 90000 });
+        const response = await axios.post(getRequestUrl(), body, { headers, timeout: 90000 });
         const raw = response.data?.choices?.[0]?.message?.content || response.data?.message?.content;
 
         if (!raw || String(raw).trim() === '') {
@@ -289,7 +299,11 @@ const callSynthesizer = async (facts, platformPrompt, retryCount = 0) => {
 
         console.error('❌ Stage 2 Failure:', err.message);
         if (err.response) {
-            console.error('❌ Stage 2 Response Data:', JSON.stringify(err.response.data, null, 2));
+            console.error('   HTTP status:', err.response.status, err.response.statusText);
+            console.error('   Response:', JSON.stringify(err.response.data, null, 2));
+        }
+        if (!AI_API_KEY) {
+            console.error('   → Check that GEMINI_API_KEY is set in backend/.env');
         }
 
         return FALLBACK_OUTPUT;

@@ -1,5 +1,7 @@
+const path = require('path');
 const dotenv = require('dotenv');
-dotenv.config();
+// Load .env from backend directory (works even when run from project root)
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -32,4 +34,9 @@ app.get('/health', (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
+    if (!process.env.GEMINI_API_KEY) {
+        console.warn('⚠️  GEMINI_API_KEY is not set. AI content generation will fail. Add it to backend/.env');
+    } else {
+        console.log('✅ GEMINI_API_KEY is configured');
+    }
 });
