@@ -8,7 +8,6 @@ const AI_MODEL_ENDPOINT = process.env.AI_MODEL_ENDPOINT || 'https://generativela
 const AI_MODEL_NAME = process.env.AI_MODEL_NAME || 'gemini-2.5-flash';
 const AI_API_KEY = process.env.GEMINI_API_KEY || '';
 
-// Gemini requires API key as ?key= param (more reliable than Bearer for this endpoint)
 const getRequestUrl = () => {
     const base = AI_MODEL_ENDPOINT;
     if (!AI_API_KEY) return base;
@@ -193,11 +192,6 @@ Return ONLY valid JSON. No conversational text.
   "core_claims": ["list of strings"]
 }`;
 
-    if (!AI_API_KEY) {
-        console.error('❌ GEMINI_API_KEY is missing. Set it in backend/.env');
-        throw new Error('GEMINI_API_KEY is not configured');
-    }
-
     const headers = { 'Content-Type': 'application/json' };
 
     const body = {
@@ -228,9 +222,7 @@ Return ONLY valid JSON. No conversational text.
         FactCache.set(hash, pruned);
         return pruned;
     } catch (err) {
-        const details = err.response?.data ? JSON.stringify(err.response.data) : err.message;
-        console.error('❌ Stage 1 Fact Extraction Failure:', details);
-        if (err.response?.status) console.error('   HTTP status:', err.response.status);
+        console.error('❌ Stage 1 Fact Extraction Failure:', err.response?.data || err.message);
         // Fallback: Return empty but valid facts so Stage 2 can at least try to proceed
         return {
             facts: ["Content was provided but precise fact extraction failed."],
@@ -257,11 +249,6 @@ const FALLBACK_OUTPUT = {
 const callSynthesizer = async (facts, platformPrompt, retryCount = 0) => {
     const maxRetries = 1;
     try {
-        if (!AI_API_KEY) {
-            console.error('❌ GEMINI_API_KEY is missing. Set it in backend/.env');
-            return FALLBACK_OUTPUT;
-        }
-
         console.log(`🎨 Stage 2: Generating stylistic variation${retryCount ? ` (retry ${retryCount})` : ''}...`);
         const headers = { 'Content-Type': 'application/json' };
 
@@ -299,11 +286,7 @@ const callSynthesizer = async (facts, platformPrompt, retryCount = 0) => {
 
         console.error('❌ Stage 2 Failure:', err.message);
         if (err.response) {
-            console.error('   HTTP status:', err.response.status, err.response.statusText);
-            console.error('   Response:', JSON.stringify(err.response.data, null, 2));
-        }
-        if (!AI_API_KEY) {
-            console.error('   → Check that GEMINI_API_KEY is set in backend/.env');
+            console.error('❌ Stage 2 Response Data:', JSON.stringify(err.response.data, null, 2));
         }
 
         return FALLBACK_OUTPUT;

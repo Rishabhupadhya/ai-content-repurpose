@@ -124,13 +124,6 @@ router.post('/generate', async (req, res) => {
                 return res.status(400).json({ error: 'Invalid platform' });
         }
 
-        if (raw && raw.error === true) {
-            return res.status(502).json({
-                error: 'AI generation failed',
-                details: raw.content || raw.feedback?.[0] || 'Please try again.'
-            });
-        }
-
         entry.outputs = entry.outputs || {};
         entry.scheduling = entry.scheduling || {};
 
