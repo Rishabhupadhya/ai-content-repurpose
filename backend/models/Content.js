@@ -1,90 +1,85 @@
 const mongoose = require('mongoose');
 
-/**
- * =========================
- * Instagram Slide Schema
- * =========================
- */
+// ─── Instagram Slide Sub-Schema ───────────────────────────────────────────────
 const InstagramSlideSchema = new mongoose.Schema(
   {
-    text: { type: String, default: "" },
-    imagePrompt: { type: String, default: "" },
-    imageUrl: { type: String, default: "" },
-    finalImage: { type: String, default: "" } // base64 image
+    text: { type: String, default: '' },
+    imagePrompt: { type: String, default: '' },
+    imageUrl: { type: String, default: '' },
+    finalImage: { type: String, default: '' }, // base64 or URL of composed slide
   },
   { _id: false }
 );
 
-/**
- * =========================
- * Main Content Schema
- * =========================
- */
-const ContentSchema = new mongoose.Schema({
-  originalUrl: String,
-  originalText: String,
-  cleanContent: {
-    type: String,
-    required: true
-  },
-  title: String,
+// ─── Main Content Schema ──────────────────────────────────────────────────────
+const ContentSchema = new mongoose.Schema(
+  {
+    originalUrl: { type: String, default: null },
+    originalText: { type: String, default: null },
+    cleanContent: {
+      type: String,
+      required: [true, 'cleanContent is required'],
+    },
+    title: { type: String, default: 'Untitled' },
 
-  targetAudience: {
-    type: String,
-    enum: ['Developers', 'Founders', 'Students', 'Marketers', 'General'],
-    default: 'General'
-  },
-
-  outputs: {
-    linkedin: {
-      content: String,
-      explanation: String,
-      score: Number,
-      feedback: [String]
+    // Flexible — no enum so unexpected values don't throw a validation error
+    targetAudience: {
+      type: String,
+      default: 'General',
     },
 
-    instagram: {
-      slides: [InstagramSlideSchema], // ✅ FIXED
-      explanation: String,
-      score: Number,
-      feedback: [String]
+    outputs: {
+      linkedin: {
+        content: { type: String, default: '' },
+        explanation: { type: String, default: '' },
+        score: { type: Number, default: 0 },
+        feedback: { type: [String], default: [] },
+      },
+
+      instagram: {
+        slides: { type: [InstagramSlideSchema], default: [] },
+        explanation: { type: String, default: '' },
+        score: { type: Number, default: 0 },
+        feedback: { type: [String], default: [] },
+      },
+
+      twitter: {
+        thread: { type: [String], default: [] },
+        explanation: { type: String, default: '' },
+        score: { type: Number, default: 0 },
+        feedback: { type: [String], default: [] },
+      },
+
+      newsletter: {
+        content: { type: String, default: '' },
+        explanation: { type: String, default: '' },
+        score: { type: Number, default: 0 },
+        feedback: { type: [String], default: [] },
+      },
+
+      seo: {
+        title: { type: String, default: '' },
+        metaDescription: { type: String, default: '' },
+        keywords: { type: [String], default: [] },
+        explanation: { type: String, default: '' },
+        score: { type: Number, default: 0 },
+        feedback: { type: [String], default: [] },
+      },
     },
 
-    twitter: {
-      thread: [String],
-      explanation: String,
-      score: Number,
-      feedback: [String]
+    scheduling: {
+      linkedin: { type: String, default: null },
+      instagram: { type: String, default: null },
+      twitter: { type: String, default: null },
+      newsletter: { type: String, default: null },
     },
-
-    newsletter: {
-      content: String,
-      explanation: String,
-      score: Number,
-      feedback: [String]
-    },
-
-    seo: {
-      title: String,
-      metaDescription: String,
-      keywords: [String],
-      explanation: String,
-      score: Number,
-      feedback: [String]
-    }
   },
-
-  scheduling: {
-    linkedin: String,
-    instagram: String,
-    twitter: String,
-    newsletter: String
-  },
-
-  createdAt: {
-    type: Date,
-    default: Date.now
+  {
+    timestamps: true, // adds createdAt + updatedAt automatically
   }
-});
+);
+
+// Index for faster recent-content queries
+ContentSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model('Content', ContentSchema);
