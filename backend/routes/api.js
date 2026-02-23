@@ -79,7 +79,8 @@ router.post('/ingest', async (req, res) => {
         res.json({ id: entry._id });
     } catch (err) {
         console.error('❌ Ingest error:', err);
-        res.status(500).json({ error: 'Failed to ingest content' });
+        const msg = err.message || 'Failed to ingest content';
+        res.status(err.message?.includes('404') ? 404 : 500).json({ error: msg });
     }
 });
 

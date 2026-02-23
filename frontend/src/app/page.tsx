@@ -118,8 +118,9 @@ export default function Home() {
                 outputs: {},
                 scheduling: {},
             });
-        } catch (err) {
-            alert("Failed to ingest content");
+        } catch (err: any) {
+            const msg = err?.response?.data?.error || err?.message || "Failed to ingest content";
+            alert(msg);
         } finally {
             setLoading(false);
         }

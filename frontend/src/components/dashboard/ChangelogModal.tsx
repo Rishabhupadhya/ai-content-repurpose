@@ -80,14 +80,17 @@ export const ChangelogModal = ({ isOpen, onClose }: ChangelogModalProps) => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="absolute inset-0 bg-slate-950/80 backdrop-blur-md"
+                        className="absolute inset-0 z-[101] bg-slate-950/80 backdrop-blur-md cursor-pointer"
                     />
 
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="relative w-full max-w-xl bg-[rgba(15,23,42,0.98)] border border-white/10 rounded-[2.5rem] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                        role="dialog"
+                        aria-modal="true"
+                        className="relative z-[102] w-full max-w-xl bg-[rgba(15,23,42,0.98)] border border-white/10 rounded-[2.5rem] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] overflow-hidden"
                     >
                         {/* Decorative background */}
                         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[100px] -mr-32 -mt-32" />
@@ -105,8 +108,10 @@ export const ChangelogModal = ({ isOpen, onClose }: ChangelogModalProps) => {
                                     </div>
                                 </div>
                                 <button
-                                    onClick={onClose}
-                                    className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors border border-white/10"
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); onClose(); }}
+                                    aria-label="Close changelog"
+                                    className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors border border-white/10 cursor-pointer"
                                 >
                                     <X className="w-5 h-5 text-white" />
                                 </button>
@@ -121,8 +126,9 @@ export const ChangelogModal = ({ isOpen, onClose }: ChangelogModalProps) => {
                             <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
                                 <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">End of Log</span>
                                 <button
-                                    onClick={onClose}
-                                    className="px-6 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-black text-white uppercase tracking-widest flex items-center gap-2 transition-all hover:scale-105 active:scale-95"
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); onClose(); }}
+                                    className="px-6 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-black text-white uppercase tracking-widest flex items-center gap-2 transition-all hover:scale-105 active:scale-95 cursor-pointer"
                                 >
                                     Close Engine Log <ArrowRight className="w-3.5 h-3.5" />
                                 </button>

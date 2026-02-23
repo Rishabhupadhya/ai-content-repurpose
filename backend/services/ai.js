@@ -6,6 +6,7 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const AI_MODEL_ENDPOINT = process.env.AI_MODEL_ENDPOINT || 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 const AI_MODEL_NAME = process.env.AI_MODEL_NAME || 'gemini-2.5-flash';
+const FALLBACK_MODEL = 'gemini-1.5-flash';  // Use if 2.5 fails (e.g. API tier)
 const AI_API_KEY = process.env.GEMINI_API_KEY || '';
 
 const getRequestUrl = () => {
@@ -13,6 +14,20 @@ const getRequestUrl = () => {
     if (!AI_API_KEY) return base;
     const sep = base.includes('?') ? '&' : '?';
     return `${base}${sep}key=${encodeURIComponent(AI_API_KEY)}`;
+};
+
+// Extract raw text from various Gemini/OpenAI response shapes
+const getRawContent = (response) => {
+    const data = response?.data;
+    if (!data) return null;
+    const msg = data.choices?.[0]?.message;
+    const content = msg?.content;
+    if (typeof content === 'string') return content;
+    if (Array.isArray(content)) {
+        const textPart = content.find(p => p?.type === 'text' && p?.text);
+        return textPart ? textPart.text : content.map(p => p?.text).filter(Boolean).join('');
+    }
+    return data.message?.content || data.candidates?.[0]?.content?.parts?.[0]?.text || null;
 };
 
 /**
@@ -106,12 +121,22 @@ const extractJSON = (text) => {
     return null;
 };
 
-// Safe repairs: control chars, trailing commas. Avoid aggressive regex that can corrupt strings.
+// Safe repairs: control chars, trailing commas, unescaped newlines in strings
 const sanitizeJSONString = (json) => {
     if (!json) return '';
-    return json
-        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '')  // Keep \t, \n, \r
-        .replace(/,(\s*[}\]])/g, '$1');  // Trailing commas only
+    let out = json
+        .replace(/,(\s*[}\]])/g, '$1');  // Trailing commas
+    // Escape literal newlines inside double-quoted strings (common LLM mistake)
+    let inStr = false, escaped = false, result = '';
+    for (let i = 0; i < out.length; i++) {
+        const c = out[i];
+        if (escaped) { result += c; escaped = false; continue; }
+        if (c === '\\') { result += c; escaped = true; continue; }
+        if (c === '"') { inStr = !inStr; result += c; continue; }
+        if (inStr && (c === '\n' || c === '\r')) { result += '\\n'; continue; }
+        result += c;
+    }
+    return result.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '');
 };
 
 const repairJSON = (json) => {
@@ -147,6 +172,7 @@ const safeParseJSON = (raw) => {
     const attempts = [
         () => JSON.parse(cleaned),
         () => JSON.parse(repairJSON(cleaned)),
+        () => JSON.parse(sanitizeJSONString(cleaned)),
         () => JSON.parse(sanitizeJSONString(repairJSON(cleaned))),
     ];
 
@@ -192,12 +218,15 @@ Return ONLY valid JSON. No conversational text.
   "core_claims": ["list of strings"]
 }`;
 
-    const headers = { 'Content-Type': 'application/json' };
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(AI_API_KEY && { 'Authorization': `Bearer ${AI_API_KEY}` })
+    };
 
     const body = {
         model: AI_MODEL_NAME,
         messages: [
-            { role: 'system', content: 'You are a precision data extraction engine. Respond with ONLY valid JSON. No markdown, no explanations, no code fences.' },
+            { role: 'system', content: 'You are a precision data extraction engine. Respond with ONLY valid JSON. No markdown, no code fences, no extra text.' },
             { role: 'user', content: `${prompt}\n\nCONTENT:\n${truncatedContent}` }
         ],
         temperature: 0.05,
@@ -207,9 +236,9 @@ Return ONLY valid JSON. No conversational text.
 
     try {
         const response = await axios.post(getRequestUrl(), body, { headers, timeout: 60000 });
-        const raw = response.data?.choices?.[0]?.message?.content || response.data?.message?.content;
+        const raw = getRawContent(response);
 
-        if (!raw) throw new Error('Empty response from Stage 1');
+        if (!raw || String(raw).trim() === '') throw new Error('Empty response from Stage 1');
 
         const parsed = safeParseJSON(raw);
 
@@ -246,14 +275,18 @@ const FALLBACK_OUTPUT = {
     feedback: ["Generation or parsing failed. Try again or use shorter input."]
 };
 
-const callSynthesizer = async (facts, platformPrompt, retryCount = 0) => {
+const callSynthesizer = async (facts, platformPrompt, retryCount = 0, useFallbackModel = false) => {
     const maxRetries = 1;
+    const model = useFallbackModel ? FALLBACK_MODEL : AI_MODEL_NAME;
     try {
         console.log(`🎨 Stage 2: Generating stylistic variation${retryCount ? ` (retry ${retryCount})` : ''}...`);
-        const headers = { 'Content-Type': 'application/json' };
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(AI_API_KEY && { 'Authorization': `Bearer ${AI_API_KEY}` })
+        };
 
         const body = {
-            model: AI_MODEL_NAME,
+            model,
             messages: [
                 { role: 'system', content: 'You are an expert social media strategist. Output ONLY valid JSON. No markdown, no explanations, no code fences. Use double quotes for strings. Escape newlines as \\n.' },
                 { role: 'user', content: `${platformPrompt}\n\nIMPORTANT: Use ONLY the following facts. DO NOT invent numbers.\nSOURCE FACTS:\n${JSON.stringify(facts)}` }
@@ -265,9 +298,10 @@ const callSynthesizer = async (facts, platformPrompt, retryCount = 0) => {
         };
 
         const response = await axios.post(getRequestUrl(), body, { headers, timeout: 90000 });
-        const raw = response.data?.choices?.[0]?.message?.content || response.data?.message?.content;
+        const raw = getRawContent(response);
 
         if (!raw || String(raw).trim() === '') {
+            console.error('❌ Empty or missing content. Response keys:', Object.keys(response?.data || {}));
             throw new Error('Empty response from LLM');
         }
 
@@ -281,7 +315,13 @@ const callSynthesizer = async (facts, platformPrompt, retryCount = 0) => {
 
         if (isParseError && retryCount < maxRetries) {
             console.warn(`⚠️ Parse failed, retrying (${retryCount + 1}/${maxRetries})...`);
-            return callSynthesizer(facts, platformPrompt, retryCount + 1);
+            return callSynthesizer(facts, platformPrompt, retryCount + 1, useFallbackModel);
+        }
+
+        // Try fallback model on API/model errors (e.g. 404 invalid model)
+        if (!useFallbackModel && err.response?.status >= 400) {
+            console.warn(`⚠️ Trying fallback model ${FALLBACK_MODEL}...`);
+            return callSynthesizer(facts, platformPrompt, 0, true);
         }
 
         console.error('❌ Stage 2 Failure:', err.message);
