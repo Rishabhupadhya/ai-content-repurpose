@@ -18,64 +18,114 @@ const getHash = (content) => crypto.createHash('sha256').update(content).digest(
 
 /**
  * ======================================
- * 🔒 SAFE JSON EXTRACTION + CLEANING
+ * 🔒 ROBUST JSON EXTRACTION + PARSING
  * ======================================
  */
+
+// Extract JSON using balanced braces (respects strings so } inside content doesn't break)
+function extractJSONBalanced(text) {
+    if (!text || typeof text !== 'string') return null;
+    const str = text.trim();
+    const start = str.indexOf('{');
+    if (start === -1) return null;
+
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+    let quote = null;
+
+    for (let i = start; i < str.length; i++) {
+        const c = str[i];
+        if (escape) {
+            escape = false;
+            continue;
+        }
+        if (c === '\\' && inString) {
+            escape = true;
+            continue;
+        }
+        if ((c === '"' || c === "'") && !inString) {
+            inString = true;
+            quote = c;
+            continue;
+        }
+        if (c === quote && inString) {
+            inString = false;
+            quote = null;
+            continue;
+        }
+        if (inString) continue;
+
+        if (c === '{') {
+            depth++;
+        } else if (c === '}') {
+            depth--;
+            if (depth === 0) return str.slice(start, i + 1);
+        }
+    }
+    return null;
+}
+
+// Extract from markdown code block (handles ``` inside JSON by finding last ```)
+function extractFromMarkdown(text) {
+    const open = text.indexOf('```');
+    if (open === -1) return null;
+    const afterOpen = text.slice(open + 3).replace(/^json\s*/i, '').trimStart();
+    const close = afterOpen.lastIndexOf('```');
+    const inner = close === -1 ? afterOpen : afterOpen.slice(0, close).trim();
+    return inner || null;
+}
+
 const extractJSON = (text) => {
     if (!text) return null;
+    const raw = String(text)
+        .replace(/^\uFEFF/, '')  // BOM
+        .trim();
 
-    // First, try to find a JSON block wrapped in triple backticks
-    const markdownMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/```\s*([\s\S]*?)\s*```/);
-    if (markdownMatch) {
-        return markdownMatch[1];
-    }
+    // 1. Try markdown block first
+    const fromMarkdown = extractFromMarkdown(raw);
+    if (fromMarkdown && fromMarkdown.startsWith('{')) return fromMarkdown;
 
-    // Otherwise, find the first '{' and last '}'
-    const start = text.indexOf('{');
-    const end = text.lastIndexOf('}');
+    // 2. Balanced-brace extraction (handles } inside string values)
+    const balanced = extractJSONBalanced(raw);
+    if (balanced) return balanced;
 
-    if (start !== -1 && end !== -1 && end > start) {
-        return text.slice(start, end + 1);
-    }
+    // 3. Fallback: first { to last } (legacy, can fail on nested })
+    const start = raw.indexOf('{');
+    const end = raw.lastIndexOf('}');
+    if (start !== -1 && end > start) return raw.slice(start, end + 1);
 
-    return text;
+    return null;
 };
 
+// Safe repairs: control chars, trailing commas. Avoid aggressive regex that can corrupt strings.
 const sanitizeJSONString = (json) => {
-    if (!json) return "";
-    // Remove potential control characters and fix common malformations
+    if (!json) return '';
     return json
-        .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // Remove control characters
-        .replace(/([{,]\s*)(\w+):/g, '$1"$2":') // Quote unquoted keys
-        .replace(/,\s*([\]}])/g, '$1'); // Remove trailing commas
+        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '')  // Keep \t, \n, \r
+        .replace(/,(\s*[}\]])/g, '$1');  // Trailing commas only
 };
 
 const repairJSON = (json) => {
-    if (!json) return "";
+    if (!json) return '';
     let cleaned = json.trim();
 
-    // Count brackets and quotes
-    let openBraces = 0;
-    let openBrackets = 0;
-    let inString = false;
-    let escaped = false;
+    let openBraces = 0, openBrackets = 0, inString = false, escaped = false, quote = null;
 
     for (let i = 0; i < cleaned.length; i++) {
-        const char = cleaned[i];
+        const c = cleaned[i];
         if (escaped) { escaped = false; continue; }
-        if (char === '\\') { escaped = true; continue; }
-        if (char === '"') inString = !inString;
+        if ((c === '"' || c === "'") && !inString) { inString = true; quote = c; continue; }
+        if (c === quote && inString) { inString = false; quote = null; continue; }
+        if (c === '\\' && inString) { escaped = true; continue; }
         if (inString) continue;
-        if (char === '{') openBraces++;
-        if (char === '}') openBraces--;
-        if (char === '[') openBrackets++;
-        if (char === ']') openBrackets--;
+        if (c === '{') openBraces++;
+        else if (c === '}') openBraces--;
+        else if (c === '[') openBrackets++;
+        else if (c === ']') openBrackets--;
     }
 
-    // Fix truncated strings
-    if (inString) cleaned += '"';
-
-    // Fix truncated arrays and objects
+    if (inString) cleaned += quote || '"';
     while (openBrackets > 0) { cleaned += ']'; openBrackets--; }
     while (openBraces > 0) { cleaned += '}'; openBraces--; }
 
@@ -84,26 +134,25 @@ const repairJSON = (json) => {
 
 const safeParseJSON = (raw) => {
     let cleaned = extractJSON(raw);
-    if (!cleaned) throw new Error('No JSON object found');
+    if (!cleaned || !cleaned.trim()) throw new Error('No JSON object found');
 
-    try {
-        return JSON.parse(cleaned);
-    } catch (e) {
-        // Try repairing the JSON (e.g. if truncated)
-        const repaired = repairJSON(cleaned);
+    const attempts = [
+        () => JSON.parse(cleaned),
+        () => JSON.parse(repairJSON(cleaned)),
+        () => JSON.parse(sanitizeJSONString(repairJSON(cleaned))),
+    ];
+
+    for (let i = 0; i < attempts.length; i++) {
         try {
-            return JSON.parse(repaired);
-        } catch (inner) {
-            // Try sanitization + repair
-            const sanitized = sanitizeJSONString(repaired);
-            try {
-                return JSON.parse(sanitized);
-            } catch (finalError) {
-                console.error(`❌ Parse failed. Length: ${raw.length}. Snippet: ${raw.substring(0, 100)}...`);
-                throw new Error('JSON parsing failed even after repair and sanitization');
+            return attempts[i]();
+        } catch (e) {
+            if (i === attempts.length - 1) {
+                console.error(`❌ Parse failed. Raw length: ${raw?.length}. Snippet: ${String(raw).substring(0, 200)}...`);
+                throw new Error('JSON parsing failed after all repair attempts');
             }
         }
     }
+    throw new Error('JSON parsing failed');
 };
 
 /**
@@ -140,10 +189,10 @@ Return ONLY valid JSON. No conversational text.
     const body = {
         model: AI_MODEL_NAME,
         messages: [
-            { role: 'system', content: 'You are a precision data extraction engine. You MUST respond with ONLY valid JSON and nothing else.' },
+            { role: 'system', content: 'You are a precision data extraction engine. Respond with ONLY valid JSON. No markdown, no explanations, no code fences.' },
             { role: 'user', content: `${prompt}\n\nCONTENT:\n${truncatedContent}` }
         ],
-        temperature: 0.1,
+        temperature: 0.05,
         response_format: { type: 'json_object' }
     };
 
@@ -183,26 +232,35 @@ Return ONLY valid JSON. No conversational text.
 
 /**
  * ======================================
- * 🎨 STAGE 2: STYLISTIC GENERATION
+ * 🎨 STAGE 2: STYLISTIC GENERATION (with retry on parse failure)
  * ======================================
  */
-const callSynthesizer = async (facts, platformPrompt) => {
+const FALLBACK_OUTPUT = {
+    error: true,
+    content: "The AI was unable to structure the output. Please try again.",
+    thread: ["The AI was unable to structure the output. Please try again."],
+    slides: [{ text: "Error generating content", imagePrompt: "" }],
+    score: 0,
+    feedback: ["Generation or parsing failed. Try again or use shorter input."]
+};
+
+const callSynthesizer = async (facts, platformPrompt, retryCount = 0) => {
+    const maxRetries = 1;
     try {
-        console.log("🎨 Stage 2: Generating stylistic variation...");
+        console.log(`🎨 Stage 2: Generating stylistic variation${retryCount ? ` (retry ${retryCount})` : ''}...`);
         const headers = AI_API_KEY ? { 'Authorization': `Bearer ${AI_API_KEY}`, 'Content-Type': 'application/json' } : {};
 
         const body = {
             model: AI_MODEL_NAME,
             messages: [
-                { role: 'system', content: 'You are an expert social media strategist. Output MUST be valid JSON.' },
+                { role: 'system', content: 'You are an expert social media strategist. Output ONLY valid JSON. No markdown, no explanations, no code fences. Use double quotes for strings. Escape newlines as \\n.' },
                 { role: 'user', content: `${platformPrompt}\n\nIMPORTANT: Use ONLY the following facts. DO NOT invent numbers.\nSOURCE FACTS:\n${JSON.stringify(facts)}` }
             ],
-            temperature: 0.7,
+            temperature: 0.6,
             top_p: 0.9,
             response_format: { type: 'json_object' }
         };
 
-        // Use Ollama options ONLY if no API key is present
         if (!AI_API_KEY) {
             body.options = { num_ctx: 10240, num_predict: 4096 };
         } else {
@@ -212,26 +270,29 @@ const callSynthesizer = async (facts, platformPrompt) => {
         const response = await axios.post(AI_MODEL_ENDPOINT, body, { headers, timeout: 90000 });
         const raw = response.data?.choices?.[0]?.message?.content || response.data?.message?.content;
 
-        if (!raw || raw.trim() === '') {
+        if (!raw || String(raw).trim() === '') {
             throw new Error('Empty response from LLM');
         }
 
         return safeParseJSON(raw);
     } catch (err) {
+        const isParseError = err.message && (
+            err.message.includes('JSON') ||
+            err.message.includes('parsing') ||
+            err.message.includes('parse')
+        );
+
+        if (isParseError && retryCount < maxRetries) {
+            console.warn(`⚠️ Parse failed, retrying (${retryCount + 1}/${maxRetries})...`);
+            return callSynthesizer(facts, platformPrompt, retryCount + 1);
+        }
+
         console.error('❌ Stage 2 Failure:', err.message);
         if (err.response) {
             console.error('❌ Stage 2 Response Data:', JSON.stringify(err.response.data, null, 2));
         }
 
-        // Final fallback if parsing fails - return a safe object
-        return {
-            error: true,
-            content: "The AI was unable to structure the output. Please try again with a shorter input.",
-            thread: ["The AI was unable to structure the output. Please try again."],
-            slides: [{ text: "Error generating content", imagePrompt: "" }],
-            score: 0,
-            feedback: ["Generation or Parsing failed"]
-        };
+        return FALLBACK_OUTPUT;
     }
 };
 
